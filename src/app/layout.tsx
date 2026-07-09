@@ -9,8 +9,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Tool Lord — Bộ công cụ web",
-  description: "Tập hợp nhiều tool nhỏ hữu ích. Bắt đầu với tool mã hóa tin nhắn.",
+  title: "Tool Lord — Bộ công cụ web nhanh, gọn, riêng tư",
+  description:
+    "Bộ sưu tập công cụ web nhỏ gọn chạy ngay trong trình duyệt: mã hóa tin nhắn, gõ mõ tích phúc và nhiều hơn nữa. Miễn phí, không cần đăng ký, không quảng cáo.",
 };
 
 // Applied before paint so the saved theme is set with no flash of the wrong mode.

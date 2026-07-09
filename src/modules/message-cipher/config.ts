@@ -4,7 +4,7 @@ export const messageCipherTool: ToolDefinition = {
   slug: "message-cipher",
   name: "Mã hóa tin nhắn",
   description:
-    "Mã hóa / giải mã tin nhắn hai chiều bằng key riêng của web kết hợp key của bạn. Dịch real-time, nhiều kiểu chữ (ngoài hành tinh, Ả Rập cổ, rune, cổ tự Ai Cập...).",
+    "Biến tin nhắn thành ký tự bí ẩn mà chỉ người có đúng key mới đọc được. Mã hóa hai lớp, dịch tức thì, hàng loạt kiểu chữ độc lạ: ngoài hành tinh, Ả Rập cổ, rune, cổ tự Ai Cập…",
   icon: "lock-keyhole",
   category: "Bảo mật",
   enabled: true,
