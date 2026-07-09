@@ -1,0 +1,46 @@
+rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: {uid}  (the Firebase Auth uid)
+// Fields:
+//   - credits: number   (required) - remaining quota for resource-heavy tools
+//   - createdAt: timestamp (required, immutable) - when the account doc was made
+//   - updatedAt: timestamp (optional) - last server mutation
+//
+// WRITE MODEL (critical): the `credits` balance is mutated ONLY on the server
+// via the Firebase Admin SDK, which BYPASSES these rules entirely. Therefore
+// clients are never allowed to write this collection — they may only READ their
+// own document to display the remaining balance. This makes client-side credit
+// tampering impossible by construction, and the server enforces atomicity with
+// transactions (see src/lib/credits.ts) to prevent race-condition double-spend.
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Helper functions ---
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // --- User accounts (credits / quota) ---
+    match /users/{userId} {
+      // Owner may read their own account (contains only their own data).
+      allow read: if isOwner(userId);
+      // All writes go through the Admin SDK on the server — never the client.
+      allow write: if false;
+    }
+
+    // --- Default deny everything else ---
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

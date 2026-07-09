@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft, Command } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
+import { AuthMenu } from "@/modules/auth/components/AuthMenu";
 
 /**
  * Frosted-glass top navigation, shared across pages.
@@ -31,7 +32,10 @@ export function SiteNav({
           </Link>
         )}
         {title ? <span className="nav-title">{title}</span> : null}
-        <ThemeToggle />
+        <div className="nav-actions">
+          <AuthMenu />
+          <ThemeToggle />
+        </div>
       </div>
     </nav>
   );
