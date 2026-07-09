@@ -28,5 +28,10 @@
     "@types/react": "19.0.7",
     "@types/react-dom": "19.0.3",
     "typescript": "5.7.3"
+  },
+  "overrides": {
+    "jwks-rsa": {
+      "jose": "^5.9.6"
+    }
   }
 }
