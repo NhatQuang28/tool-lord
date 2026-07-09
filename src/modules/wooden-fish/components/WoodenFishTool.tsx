@@ -1,12 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { RotateCcw, Volume2, VolumeX } from "lucide-react";
 
 /** localStorage slots so merit + sound preference survive reloads. */
 const MERIT_KEY = "go-mo:merit";
 const MUTED_KEY = "go-mo:muted";
+
+/** Every N knocks, the Buddha manifests. */
+const BLESS_EVERY = 100;
 
 /** Auspicious phrases that float up on each knock. */
 const PHRASES = [
@@ -37,16 +40,23 @@ export function WoodenFishTool() {
   const [merit, setMerit] = useState(0);
   const [muted, setMuted] = useState(false);
   const [pops, setPops] = useState<Pop[]>([]);
+  const [blessing, setBlessing] = useState(false);
 
   const audioRef = useRef<AudioContext | null>(null);
   const idRef = useRef(0);
   const fishRef = useRef<HTMLDivElement>(null);
+  const meritRef = useRef(0);
+  const blessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Restore saved merit + sound preference on first mount.
   useEffect(() => {
     try {
       const savedMerit = localStorage.getItem(MERIT_KEY);
-      if (savedMerit) setMerit(parseInt(savedMerit, 10) || 0);
+      if (savedMerit) {
+        const n = parseInt(savedMerit, 10) || 0;
+        setMerit(n);
+        meritRef.current = n;
+      }
       setMuted(localStorage.getItem(MUTED_KEY) === "1");
     } catch {
       /* localStorage may be unavailable */
@@ -120,16 +130,22 @@ export function WoodenFishTool() {
   }, [muted]);
 
   const knock = useCallback(() => {
-    // +1 merit (persisted).
-    setMerit((m) => {
-      const n = m + 1;
-      try {
-        localStorage.setItem(MERIT_KEY, String(n));
-      } catch {
-        /* ignore */
-      }
-      return n;
-    });
+    // +1 merit (persisted). Track in a ref so we can reliably detect the
+    // every-100 milestone without racing React's async state.
+    const n = meritRef.current + 1;
+    meritRef.current = n;
+    setMerit(n);
+    try {
+      localStorage.setItem(MERIT_KEY, String(n));
+    } catch {
+      /* ignore */
+    }
+    // Every 100 knocks, the Buddha manifests for 4 seconds.
+    if (n % BLESS_EVERY === 0) {
+      setBlessing(true);
+      if (blessTimerRef.current) clearTimeout(blessTimerRef.current);
+      blessTimerRef.current = setTimeout(() => setBlessing(false), 4000);
+    }
 
     // Spawn a floating "+1" at a random spot within ~500px of the wooden fish.
     const id = idRef.current++;
@@ -172,6 +188,7 @@ export function WoodenFishTool() {
 
   const reset = () => {
     setMerit(0);
+    meritRef.current = 0;
     try {
       localStorage.setItem(MERIT_KEY, "0");
     } catch {
@@ -255,6 +272,41 @@ export function WoodenFishTool() {
           {p.text}
         </span>
       ))}
+
+      {/* Every 100 knocks: the Buddha manifests with a radiant aura for 4s. */}
+      <AnimatePresence>
+        {blessing && (
+          <motion.div
+            className="gomo-bless"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="gomo-bless-rays" aria-hidden />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <motion.img
+              className="gomo-bless-img"
+              src="/phat.png"
+              alt="Phật Tổ hiển linh"
+              draggable={false}
+              initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.7, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.92 }}
+              transition={{ type: "spring", stiffness: 120, damping: 16 }}
+            />
+            <motion.p
+              className="gomo-bless-text"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+            >
+              Phật Tổ chứng giám · Công đức viên mãn
+            </motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
