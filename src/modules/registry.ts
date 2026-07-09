@@ -1,5 +1,6 @@
 import type { ToolDefinition } from "@/lib/tool";
 import { messageCipherTool } from "@/modules/message-cipher/config";
+import { woodenFishTool } from "@/modules/wooden-fish/config";
 
 /**
  * Central registry of every tool in the app.
@@ -9,7 +10,7 @@ import { messageCipherTool } from "@/modules/message-cipher/config";
  *   2. Add its metadata import here.
  *   3. Create the route at `src/app/tools/<slug>/page.tsx`.
  */
-export const tools: ToolDefinition[] = [messageCipherTool];
+export const tools: ToolDefinition[] = [messageCipherTool, woodenFishTool];
 
 export const enabledTools = tools.filter((t) => t.enabled !== false);
 

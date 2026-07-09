@@ -743,6 +743,90 @@ select {
   animation: fade-up var(--dur-slow) var(--ease-out) both;
 }
 
+/* Gõ mõ tích phúc ------------------------------------------------------- */
+.gomo-counter {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+.gomo-counter-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.gomo-counter-value {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.gomo-root {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  min-height: calc(100dvh - 180px);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+.gomo-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.gomo-fish {
+  filter: drop-shadow(0 16px 28px rgba(0, 0, 0, 0.32));
+  max-width: 100%;
+}
+.gomo-img {
+  height: min(52vh, 420px);
+  width: auto;
+  max-width: 88vw;
+  display: block;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+.gomo-hint {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.gomo-pop {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;
+  white-space: nowrap;
+  font-weight: 800;
+  font-size: 24px;
+  color: #e01e1e;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%);
+  animation: gomo-float 1.05s var(--ease-out) forwards;
+}
+@keyframes gomo-float {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -40%) scale(0.7);
+  }
+  16% {
+    opacity: 1;
+    transform: translate(-50%, -65%) scale(1.12);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -170%) scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

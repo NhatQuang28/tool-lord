@@ -1,4 +1,5 @@
 import {
+  HandHeart,
   LockKeyhole,
   Wrench,
   type LucideIcon,
@@ -14,6 +15,7 @@ import {
  */
 const ICONS: Record<string, LucideIcon> = {
   "lock-keyhole": LockKeyhole,
+  "hand-heart": HandHeart,
 };
 
 const FALLBACK: LucideIcon = Wrench;
