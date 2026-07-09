@@ -100,7 +100,19 @@ export async function POST(req: NextRequest) {
   // every new upload. Skipped entirely when the var is unset (feature off).
   const limit = storageLimitBytes();
   if (limit !== null) {
-    const usage = await getBucketUsageBytes();
+    let usage: number;
+    try {
+      usage = await getBucketUsageBytes();
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Không kiểm tra được dung lượng kho lưu trữ.";
+      return NextResponse.json<CreateShareResponse>(
+        { id: "", uploads: [], error: message },
+        { status: 500 },
+      );
+    }
     if (usage + total > limit) {
       const gb = (limit / (1024 * 1024 * 1024)).toFixed(0);
       return NextResponse.json<CreateShareResponse>(
@@ -146,14 +158,23 @@ export async function POST(req: NextRequest) {
   // The client uploads the blobs to the presigned URLs after this returns; a
   // failed upload leaves an orphan manifest, which is harmless (nothing to
   // decrypt) and can be swept later by object lifecycle rules.
-  await adminDb
-    .collection("imageShares")
-    .doc(id)
-    .set({
-      ownerUid: user.uid,
-      createdAt: FieldValue.serverTimestamp(),
-      files: storedFiles,
-    });
+  try {
+    await adminDb
+      .collection("imageShares")
+      .doc(id)
+      .set({
+        ownerUid: user.uid,
+        createdAt: FieldValue.serverTimestamp(),
+        files: storedFiles,
+      });
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Không lưu được album.";
+    return NextResponse.json<CreateShareResponse>(
+      { id: "", uploads: [], error: message },
+      { status: 500 },
+    );
+  }
 
   return NextResponse.json<CreateShareResponse>({ id, uploads });
 }

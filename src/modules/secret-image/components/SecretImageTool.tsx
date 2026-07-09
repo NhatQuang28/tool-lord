@@ -142,7 +142,17 @@ export function SecretImageTool() {
           })),
         }),
       });
-      const data = (await res.json()) as CreateShareResponse;
+      // The server always answers with JSON; if we get something else (e.g. an
+      // HTML error page from a crashed route or a proxy), surface a readable
+      // message instead of a cryptic "Unexpected token '<'" JSON parse error.
+      let data: CreateShareResponse;
+      try {
+        data = (await res.json()) as CreateShareResponse;
+      } catch {
+        throw new Error(
+          `Máy chủ trả về phản hồi không hợp lệ (HTTP ${res.status}). Vui lòng thử lại sau.`,
+        );
+      }
       if (!res.ok || data.error) {
         throw new Error(data.error || "Không tạo được album.");
       }
