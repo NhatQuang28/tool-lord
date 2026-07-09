@@ -1,6 +1,6 @@
 import "server-only";
 import { FieldValue } from "firebase-admin/firestore";
-import { adminDb } from "@/lib/firebase/admin";
+import { getAdminDb } from "@/lib/firebase/admin";
 
 /**
  * Per-user credit / quota accounting for resource-heavy tools.
@@ -29,7 +29,7 @@ export class InsufficientCreditsError extends Error {
   }
 }
 
-const userRef = (uid: string) => adminDb.collection("users").doc(uid);
+const userRef = (uid: string) => getAdminDb().collection("users").doc(uid);
 
 /**
  * Atomically verify the user has at least `cost` credits and deduct them.
@@ -44,7 +44,7 @@ export async function consumeCredit(uid: string, cost = 1): Promise<number> {
   }
 
   const ref = userRef(uid);
-  return adminDb.runTransaction(async (tx) => {
+  return getAdminDb().runTransaction(async (tx) => {
     const snap = await tx.get(ref);
 
     if (!snap.exists) {
