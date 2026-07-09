@@ -10,6 +10,8 @@ import {
   Dices,
   Loader2,
   Lock,
+  LockKeyhole,
+  LockKeyholeOpen,
   Unlock,
 } from "lucide-react";
 import {
@@ -20,11 +22,15 @@ import {
 import { generateUserKey } from "../lib/keygen";
 import type { CipherMode, CipherResponse } from "../types";
 
+/** localStorage slot for a user-locked key that should survive reloads. */
+const STORAGE_KEY = "message-cipher:userKey";
+
 export function MessageCipherTool() {
   const reduce = useReducedMotion();
   const [mode, setMode] = useState<CipherMode>("encrypt");
   const [input, setInput] = useState("");
   const [userKey, setUserKey] = useState("");
+  const [locked, setLocked] = useState(false);
   const [styleId, setStyleId] = useState(DEFAULT_STYLE_ID);
   const [output, setOutput] = useState("");
   const [error, setError] = useState("");
@@ -34,10 +40,36 @@ export function MessageCipherTool() {
   const abortRef = useRef<AbortController | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Generate a starter key on first mount so the tool works immediately.
+  // On first mount, restore a previously locked key from localStorage so it
+  // survives reloads; otherwise start with a fresh random key.
   useEffect(() => {
-    setUserKey(generateUserKey());
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem(STORAGE_KEY);
+    } catch {
+      /* localStorage may be unavailable (private mode, etc.) */
+    }
+    if (saved) {
+      setUserKey(saved);
+      setLocked(true);
+    } else {
+      setUserKey(generateUserKey());
+    }
   }, []);
+
+  // Lock/unlock persists the current key to (or clears it from) localStorage.
+  const toggleLock = () => {
+    setLocked((prev) => {
+      const next = !prev;
+      try {
+        if (next) localStorage.setItem(STORAGE_KEY, userKey);
+        else localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        /* ignore storage failures */
+      }
+      return next;
+    });
+  };
 
   const inputLabel = mode === "encrypt" ? "Tin nhắn gốc" : "Bản mã cần giải";
   const outputLabel = mode === "encrypt" ? "Bản mã" : "Tin nhắn gốc";
@@ -223,14 +255,38 @@ export function MessageCipherTool() {
             onChange={(e) => setUserKey(e.target.value)}
             placeholder="Dán key vào đây hoặc bấm Tạo key"
             spellCheck={false}
+            readOnly={locked}
+            title={locked ? "Key đang khóa — mở khóa để chỉnh" : undefined}
           />
           <button
             type="button"
             className="btn small"
             onClick={() => setUserKey(generateUserKey())}
             title="Tạo key ngẫu nhiên"
+            disabled={locked}
           >
             <Dices size={16} strokeWidth={2.2} /> Tạo key
+          </button>
+          <button
+            type="button"
+            className={locked ? "btn small locked" : "btn small"}
+            onClick={toggleLock}
+            title={
+              locked
+                ? "Mở khóa key (xóa khỏi trình duyệt)"
+                : "Khóa key (lưu vào trình duyệt, giữ nguyên khi tải lại)"
+            }
+            aria-pressed={locked}
+          >
+            {locked ? (
+              <>
+                <LockKeyhole size={16} strokeWidth={2.2} /> Đã khóa
+              </>
+            ) : (
+              <>
+                <LockKeyholeOpen size={16} strokeWidth={2.2} /> Khóa
+              </>
+            )}
           </button>
           <button
             type="button"
@@ -252,7 +308,9 @@ export function MessageCipherTool() {
         <p className="hint">
           Người nhận cần <strong>đúng key này</strong> và{" "}
           <strong>đúng kiểu chữ</strong> để giải mã. Key riêng của web được giữ
-          bí mật ở máy chủ nên chỉ có bản mã thôi thì không giải được.
+          bí mật ở máy chủ nên chỉ có bản mã thôi thì không giải được. Bấm{" "}
+          <strong>Khóa</strong> để lưu key vào trình duyệt — key sẽ giữ nguyên
+          mỗi lần tải lại trang.
         </p>
       </div>
 

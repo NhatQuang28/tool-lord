@@ -658,6 +658,15 @@ select {
   font-family: var(--font-mono);
   font-size: 14px;
 }
+.key-row input[readonly] {
+  opacity: 0.7;
+  cursor: default;
+}
+.btn.small.locked {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
 
 .hint {
   font-size: 13px;
