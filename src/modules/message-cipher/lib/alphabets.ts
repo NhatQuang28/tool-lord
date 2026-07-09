@@ -73,6 +73,13 @@ export const STYLES: CipherStyle[] = [
       "☉☽☿♀♁♂♃♄♅♆♇★☆✦✧✩✪✫✬✭✮✯✰⁂⁎⁑⁕❂❉❊❋✵✶✷✸✹✺✻✼❄❅❆⌘⌬⏦⏥⎔⎈◈◉◊○◌◍◎●◐◑◒◓◔◕",
     ),
   },
+  {
+    id: "binary",
+    name: "Nhị phân",
+    sample: "0101",
+    // Base-2: encrypted bytes become strings of 0s and 1s.
+    glyphs: glyphs("01"),
+  },
 ];
 
 const STYLE_MAP = new Map(STYLES.map((s) => [s.id, s]));
