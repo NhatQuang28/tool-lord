@@ -170,15 +170,31 @@ a {
   border-radius: var(--radius-sm);
 }
 
+/* Screen-reader-only (visually hidden but announced + SEO-visible) ------- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Layout ---------------------------------------------------------------- */
+/* Horizontal padding honours the notch/rounded-corner safe areas (the
+   layout opts into viewport-fit: cover for edge-to-edge on modern phones). */
 .container {
   max-width: 980px;
   margin: 0 auto;
-  padding: 0 clamp(20px, 5vw, 32px);
+  padding-left: max(clamp(20px, 5vw, 32px), env(safe-area-inset-left));
+  padding-right: max(clamp(20px, 5vw, 32px), env(safe-area-inset-right));
 }
 
 .page {
-  padding-bottom: var(--space-9);
+  padding-bottom: max(var(--space-9), env(safe-area-inset-bottom));
 }
 
 /* Frosted-glass navigation --------------------------------------------- */
@@ -190,6 +206,7 @@ a {
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   backdrop-filter: saturate(180%) blur(20px);
   border-bottom: 1px solid var(--border);
+  padding-top: env(safe-area-inset-top);
 }
 
 .nav-inner {
@@ -197,7 +214,8 @@ a {
   max-width: 980px;
   margin: 0 auto;
   height: 52px;
-  padding: 0 clamp(20px, 5vw, 32px);
+  padding-left: max(clamp(20px, 5vw, 32px), env(safe-area-inset-left));
+  padding-right: max(clamp(20px, 5vw, 32px), env(safe-area-inset-right));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1315,4 +1333,74 @@ select {
 }
 .si-lb-next {
   right: clamp(8px, 2vw, 24px);
+}
+
+/* ==========================================================================
+   Responsive & touch refinements
+   Keeps the Apple look; tightens layout + hit targets across phone → desktop.
+   ========================================================================== */
+
+/* Message-cipher — mode + style controls: a row on desktop, stacked on phones
+   (replaces inline styles so it can respond to width). */
+.cipher-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.cipher-toolbar .segmented {
+  flex: 0 0 auto;
+}
+.cipher-style {
+  flex: 1 1 240px;
+  min-width: 200px;
+  max-width: 340px;
+}
+@media (max-width: 560px) {
+  .cipher-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .cipher-toolbar .segmented {
+    width: 100%;
+  }
+  .cipher-toolbar .segmented button {
+    flex: 1;
+  }
+  .cipher-style {
+    max-width: none;
+  }
+}
+
+/* Key / share rows — on phones the field takes a full row and the actions
+   wrap below as equal-width, comfortably tappable buttons. */
+@media (max-width: 560px) {
+  .key-row input {
+    flex: 1 1 100%;
+  }
+  .key-row .btn.small,
+  .key-row .btn {
+    flex: 1 1 auto;
+  }
+}
+
+/* Coarse pointers (touch) — grow small controls to the 44px minimum target
+   without changing the tighter desktop density. */
+@media (pointer: coarse) {
+  .btn.small {
+    min-height: 44px;
+  }
+  .segmented button {
+    min-height: 44px;
+  }
+  .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+  .si-file-remove,
+  .mdc-image-list__action {
+    width: 44px;
+    height: 44px;
+  }
 }

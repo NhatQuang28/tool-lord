@@ -3,8 +3,9 @@ import { SiteNav } from "@/components/SiteNav";
 import { AuthForm } from "@/modules/auth/components/AuthForm";
 
 export const metadata: Metadata = {
-  title: "Đăng ký — Tool Lord",
+  title: "Đăng ký",
   description: "Tạo tài khoản Tool Lord để dùng các tính năng dành cho tài khoản.",
+  alternates: { canonical: "/register" },
 };
 
 export default function RegisterPage() {

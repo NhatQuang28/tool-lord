@@ -3,8 +3,9 @@ import { SiteNav } from "@/components/SiteNav";
 import { AuthForm } from "@/modules/auth/components/AuthForm";
 
 export const metadata: Metadata = {
-  title: "Đăng nhập — Tool Lord",
+  title: "Đăng nhập",
   description: "Đăng nhập vào Tool Lord để dùng các tính năng dành cho tài khoản.",
+  alternates: { canonical: "/login" },
 };
 
 export default function LoginPage() {

@@ -194,7 +194,7 @@ export function MessageCipherTool() {
       transition={{ type: "spring", stiffness: 260, damping: 28 }}
     >
       {/* Mode + style controls */}
-      <div className="row" style={{ justifyContent: "space-between" }}>
+      <div className="cipher-toolbar">
         <div className="segmented" role="tablist" aria-label="Chế độ">
           {modes.map(({ id, label, icon: Icon }) => (
             <button
@@ -223,7 +223,7 @@ export function MessageCipherTool() {
           ))}
         </div>
 
-        <div style={{ minWidth: 220, flex: "0 1 auto" }}>
+        <div className="cipher-style">
           <select
             value={styleId}
             onChange={(e) => setStyleId(e.target.value)}
