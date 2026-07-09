@@ -12,7 +12,11 @@ import {
   Lock,
   Unlock,
 } from "lucide-react";
-import { STYLE_OPTIONS, DEFAULT_STYLE_ID } from "../lib/alphabets";
+import {
+  STYLE_OPTIONS,
+  DEFAULT_STYLE_ID,
+  detectStyleId,
+} from "../lib/alphabets";
 import { generateUserKey } from "../lib/keygen";
 import type { CipherMode, CipherResponse } from "../types";
 
@@ -103,6 +107,23 @@ export function MessageCipherTool() {
     };
   }, [mode, input, userKey, styleId, runTranslate]);
 
+  // In decrypt mode, sniff the pasted ciphertext and switch to the matching
+  // style automatically — the user only needs to paste, not pick the "font".
+  const [autoDetected, setAutoDetected] = useState(false);
+  useEffect(() => {
+    if (mode !== "decrypt" || !input) {
+      setAutoDetected(false);
+      return;
+    }
+    const detected = detectStyleId(input);
+    if (detected) {
+      setAutoDetected(true);
+      if (detected !== styleId) setStyleId(detected);
+    } else {
+      setAutoDetected(false);
+    }
+  }, [mode, input, styleId]);
+
   const swapDirection = () => {
     // Move current output into input and flip the mode.
     setMode((m) => (m === "encrypt" ? "decrypt" : "encrypt"));
@@ -182,6 +203,11 @@ export function MessageCipherTool() {
               </option>
             ))}
           </select>
+          {mode === "decrypt" && autoDetected ? (
+            <p className="hint" style={{ marginTop: 6 }}>
+              <Check size={13} strokeWidth={2.4} /> Đã tự nhận diện kiểu chữ
+            </p>
+          ) : null}
         </div>
       </div>
 

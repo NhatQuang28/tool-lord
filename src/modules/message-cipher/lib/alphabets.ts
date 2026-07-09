@@ -90,6 +90,35 @@ export function getStyle(id: string): CipherStyle {
   return style;
 }
 
+// Precomputed glyph lookup per style, for fast detection on every keystroke.
+const GLYPH_SETS = STYLES.map((s) => ({ id: s.id, set: new Set(s.glyphs) }));
+
+/**
+ * Guess which style a ciphertext was produced with by measuring how many of its
+ * glyphs belong to each style's alphabet. Style alphabets are disjoint, so a
+ * real ciphertext scores ~100% on its own style and ~0% on the rest. Whitespace
+ * is ignored. Returns the best-matching style id, or null when nothing matches
+ * well enough (empty text, plain text, or a mixed/unknown script).
+ */
+export function detectStyleId(text: string): string | null {
+  const chars = Array.from(text).filter((c) => !/\s/.test(c));
+  if (chars.length === 0) return null;
+
+  let bestId: string | null = null;
+  let bestScore = 0;
+  for (const { id, set } of GLYPH_SETS) {
+    let hits = 0;
+    for (const c of chars) if (set.has(c)) hits++;
+    const coverage = hits / chars.length;
+    if (coverage > bestScore) {
+      bestScore = coverage;
+      bestId = id;
+    }
+  }
+  // Require a clear majority so stray characters don't trigger a false switch.
+  return bestScore >= 0.5 ? bestId : null;
+}
+
 export const DEFAULT_STYLE_ID = "alien";
 
 /** Lightweight style metadata for UI pickers (no glyph payload logic). */
