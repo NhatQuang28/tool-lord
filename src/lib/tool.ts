@@ -24,4 +24,10 @@ export interface ToolDefinition {
   category?: string;
   /** Set false to hide from the home listing (still routable). */
   enabled?: boolean;
+  /**
+   * When true the tool is only shown to (and usable by) signed-in users. The
+   * home grid hides its card while signed out, and the tool's own page/route
+   * should gate access as well. Default (undefined/false) = public.
+   */
+  requiresAuth?: boolean;
 }

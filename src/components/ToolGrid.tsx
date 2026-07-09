@@ -5,11 +5,20 @@ import { motion, useReducedMotion } from "motion/react";
 import { ArrowRight } from "lucide-react";
 import { ToolIcon } from "@/lib/icons";
 import type { ToolDefinition } from "@/lib/tool";
+import { useAuth } from "@/modules/auth/AuthProvider";
 
 const MotionLink = motion.create(Link);
 
 export function ToolGrid({ tools }: { tools: ToolDefinition[] }) {
   const reduce = useReducedMotion();
+  const { user, loading } = useAuth();
+
+  // Auth-gated tools are only shown to signed-in users. While the first
+  // auth-state resolution is pending we hide them to avoid flashing a card
+  // that then disappears.
+  const visible = tools.filter(
+    (tool) => !tool.requiresAuth || (!loading && user),
+  );
 
   return (
     <motion.div
@@ -18,7 +27,7 @@ export function ToolGrid({ tools }: { tools: ToolDefinition[] }) {
       animate="show"
       variants={{ show: { transition: { staggerChildren: 0.06 } } }}
     >
-      {tools.map((tool) => (
+      {visible.map((tool) => (
         <MotionLink
           key={tool.slug}
           href={`/tools/${tool.slug}`}
