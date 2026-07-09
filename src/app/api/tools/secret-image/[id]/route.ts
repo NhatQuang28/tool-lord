@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminDb } from "@/lib/firebase/admin";
+import { adminDb } from "@/lib/firebase/admin";
 import { presignGet } from "@/lib/r2";
 import type { ViewFile, ViewShareResponse } from "@/modules/secret-image/types";
 
@@ -26,7 +26,7 @@ export async function GET(
 ) {
   const { id } = await ctx.params;
 
-  const snap = await getAdminDb().collection("imageShares").doc(id).get();
+  const snap = await adminDb.collection("imageShares").doc(id).get();
   if (!snap.exists) {
     return NextResponse.json<ViewShareResponse>(
       { files: [], error: "Không tìm thấy album này (mã sai hoặc đã bị xóa)." },

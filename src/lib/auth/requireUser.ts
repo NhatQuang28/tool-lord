@@ -13,7 +13,7 @@
 import "server-only";
 import type { NextRequest } from "next/server";
 import type { DecodedIdToken } from "firebase-admin/auth";
-import { getAdminAuth } from "@/lib/firebase/admin";
+import { adminAuth } from "@/lib/firebase/admin";
 
 export async function requireUser(
   req: NextRequest,
@@ -23,7 +23,7 @@ export async function requireUser(
   if (!match) return null;
 
   try {
-    return await getAdminAuth().verifyIdToken(match[1]);
+    return await adminAuth.verifyIdToken(match[1]);
   } catch {
     return null;
   }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { requireUser } from "@/lib/auth/requireUser";
-import { getAdminDb } from "@/lib/firebase/admin";
+import { adminDb } from "@/lib/firebase/admin";
 import {
   presignPut,
   storageLimitBytes,
@@ -146,7 +146,7 @@ export async function POST(req: NextRequest) {
   // The client uploads the blobs to the presigned URLs after this returns; a
   // failed upload leaves an orphan manifest, which is harmless (nothing to
   // decrypt) and can be swept later by object lifecycle rules.
-  await getAdminDb()
+  await adminDb
     .collection("imageShares")
     .doc(id)
     .set({

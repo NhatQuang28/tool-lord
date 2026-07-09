@@ -1,15 +1,9 @@
 /**
- * Firebase Admin SDK singletons (server-side only).
+ * Firebase Admin SDK singleton (server-side only).
  *
  * Uses a service-account credential built from server-only env vars. NEVER
  * import this from client code — it would leak the private key. Used to verify
  * ID tokens before running resource-heavy work (see `lib/auth/requireUser.ts`).
- *
- * IMPORTANT: initialization is LAZY. Importing this module has no side effects,
- * so it is safe to evaluate at build time (`next build` "collect page data")
- * even when FIREBASE_* env vars are absent. The credential is only read on the
- * first call to `getAdminAuth()` / `getAdminDb()`, which happens at request
- * time in production where the env vars are present.
  */
 import "server-only";
 import { cert, getApp, getApps, initializeApp, type App } from "firebase-admin/app";
@@ -33,25 +27,7 @@ function createAdminApp(): App {
   });
 }
 
-let cachedApp: App | undefined;
-let cachedAuth: Auth | undefined;
-let cachedDb: Firestore | undefined;
+const adminApp: App = getApps().length ? getApp() : createAdminApp();
 
-function getAdminApp(): App {
-  if (!cachedApp) {
-    cachedApp = getApps().length ? getApp() : createAdminApp();
-  }
-  return cachedApp;
-}
-
-/** Lazily-initialized Firebase Admin Auth. Safe to import at build time. */
-export function getAdminAuth(): Auth {
-  if (!cachedAuth) cachedAuth = getAuth(getAdminApp());
-  return cachedAuth;
-}
-
-/** Lazily-initialized Firestore (Admin). Safe to import at build time. */
-export function getAdminDb(): Firestore {
-  if (!cachedDb) cachedDb = getFirestore(getAdminApp());
-  return cachedDb;
-}
+export const adminAuth: Auth = getAuth(adminApp);
+export const adminDb: Firestore = getFirestore(adminApp);
