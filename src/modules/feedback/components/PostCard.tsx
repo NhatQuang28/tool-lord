@@ -63,7 +63,7 @@ export function PostCard({
   return (
     <article className={`fb-card ${post.deleted ? "fb-deleted" : ""}`}>
       <div className="fb-card-main">
-        <VoteButtons score={post.score} myVote={post.myVote} onVote={vote} />
+        <VoteButtons score={post.score} myVote={post.myVote} onVote={vote} disabled={!user} />
         <div className="fb-card-body">
           <div className="fb-card-head">
             <span className="fb-anon">

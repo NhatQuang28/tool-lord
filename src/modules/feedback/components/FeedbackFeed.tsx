@@ -9,7 +9,7 @@ import { feedbackGet, feedbackSend } from "./client";
 import type { ListPostsResponse, PostDto, SortOrder } from "@/modules/feedback/types";
 
 export function FeedbackFeed() {
-  const { user, loading } = useAuth();
+  const { user, loading, hasRole } = useAuth();
   const [posts, setPosts] = useState<PostDto[]>([]);
   const [sort, setSort] = useState<SortOrder>("new");
   const [cursor, setCursor] = useState<string | null>(null);
@@ -54,8 +54,13 @@ export function FeedbackFeed() {
   }
 
   function onChanged(updated: PostDto) {
-    // Managers keep seeing hidden posts (dimmed); regular users drop them.
-    setPosts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    setPosts((prev) => {
+      // Non-managers stop seeing a post once it's hidden/deleted; managers keep it dimmed.
+      if (updated.deleted && !hasRole("manager")) {
+        return prev.filter((p) => p.id !== updated.id);
+      }
+      return prev.map((p) => (p.id === updated.id ? updated : p));
+    });
   }
 
   return (

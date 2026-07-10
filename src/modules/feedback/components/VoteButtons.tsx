@@ -27,7 +27,7 @@ export function VoteButtons({
       <button
         type="button"
         className={`fb-vote ${myVote === 1 ? "active up" : ""}`}
-        aria-label="Up"
+        aria-label="Tăng"
         aria-pressed={myVote === 1}
         disabled={disabled}
         onClick={() => onVote(1)}
@@ -38,7 +38,7 @@ export function VoteButtons({
       <button
         type="button"
         className={`fb-vote ${myVote === -1 ? "active down" : ""}`}
-        aria-label="Down"
+        aria-label="Giảm"
         aria-pressed={myVote === -1}
         disabled={disabled}
         onClick={() => onVote(-1)}
