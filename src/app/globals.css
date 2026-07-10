@@ -1584,3 +1584,8 @@ select {
 .fb-empty { opacity: 0.6; text-align: center; padding: 1.5rem 0; }
 .fb-more { align-self: center; }
 .fb-signin-hint { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+
+.fb-comments { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(127, 127, 127, 0.18); display: flex; flex-direction: column; gap: 0.6rem; }
+.fb-comment { display: flex; gap: 0.6rem; }
+.fb-comment-body { flex: 1; min-width: 0; }
+.fb-comment-add { display: flex; flex-direction: column; gap: 0.35rem; }

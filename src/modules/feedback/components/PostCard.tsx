@@ -7,6 +7,7 @@ import { useState } from "react";
 import { MessageSquare, Pencil, Trash2, BadgeCheck, Eye, RotateCcw, User } from "lucide-react";
 import { useAuth } from "@/modules/auth/AuthProvider";
 import { VoteButtons } from "./VoteButtons";
+import { CommentList } from "./CommentList";
 import { feedbackSend } from "./client";
 import { MAX_POST_LEN, type PostDto, type VoteValue } from "@/modules/feedback/types";
 
@@ -131,7 +132,7 @@ export function PostCard({
             ) : null}
           </div>
 
-          {showComments ? <div className="fb-comments-slot" data-post-id={post.id} /> : null}
+          {showComments ? <CommentList postId={post.id} onCountChange={(n) => onChanged({ ...post, commentCount: n })} /> : null}
         </div>
       </div>
     </article>
