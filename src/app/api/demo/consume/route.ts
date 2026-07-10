@@ -1,24 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth/requireUser";
-import { consumeCredit, InsufficientCreditsError } from "@/lib/credits";
+import { requireRole } from "@/lib/auth/roles.server";
+import { spendCredit, InsufficientCreditsError } from "@/lib/credits";
 
 /**
  * Reference "resource-heavy tool" endpoint showing the full gate pattern:
- *   1. requireUser  — verify identity (Admin SDK, server-side).
- *   2. consumeCredit — atomically spend quota (race-condition safe).
+ *   1. requireRole  — verify identity + role (Admin SDK, server-side).
+ *   2. spendCredit  — atomically spend quota (race-safe); no-op for unlimited
+ *                     roles (manager/admin), which return `remaining: null`.
  *   3. ...run the actual expensive work only after both pass.
  *
  * Copy this shape for real gated tools. The client calls it via `authedFetch`.
+ * Use a higher `min` (e.g. "manager") here to restrict a tool by role.
  */
 export async function POST(req: NextRequest) {
-  const user = await requireUser(req);
-  if (!user) {
-    return NextResponse.json({ error: "Chưa đăng nhập." }, { status: 401 });
+  const gate = await requireRole(req, "user");
+  if (!gate.ok) {
+    return NextResponse.json({ error: gate.error }, { status: gate.status });
   }
 
   try {
-    const remaining = await consumeCredit(user.uid, 1);
-    // --- real resource-heavy work would go here, using user.uid ---
+    const remaining = await spendCredit(gate.user.uid, gate.role, 1);
+    // --- real resource-heavy work would go here, using gate.user.uid ---
     return NextResponse.json({ ok: true, remaining });
   } catch (err) {
     if (err instanceof InsufficientCreditsError) {

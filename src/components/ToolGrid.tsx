@@ -11,14 +11,18 @@ const MotionLink = motion.create(Link);
 
 export function ToolGrid({ tools }: { tools: ToolDefinition[] }) {
   const reduce = useReducedMotion();
-  const { user, loading } = useAuth();
+  const { user, loading, hasRole } = useAuth();
 
-  // Auth-gated tools are only shown to signed-in users. While the first
-  // auth-state resolution is pending we hide them to avoid flashing a card
-  // that then disappears.
-  const visible = tools.filter(
-    (tool) => !tool.requiresAuth || (!loading && user),
-  );
+  // Auth-gated tools are only shown to signed-in users, and role-gated tools
+  // (minRole) only to users at or above that role. While the first auth-state
+  // resolution is pending we hide such cards to avoid flashing a card that
+  // then disappears.
+  const visible = tools.filter((tool) => {
+    const gated = tool.requiresAuth || tool.minRole;
+    if (!gated) return true;
+    if (loading || !user) return false;
+    return tool.minRole ? hasRole(tool.minRole) : true;
+  });
 
   return (
     <motion.div

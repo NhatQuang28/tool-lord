@@ -1,6 +1,7 @@
 import "server-only";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase/admin";
+import { isUnlimitedCredits, type Role } from "@/lib/roles";
 
 /**
  * Per-user credit / quota accounting for resource-heavy tools.
@@ -69,6 +70,23 @@ export async function consumeCredit(uid: string, cost = 1): Promise<number> {
     });
     return remaining;
   });
+}
+
+/**
+ * Role-aware spend: managers/admins have unlimited quota and are never metered,
+ * so this no-ops and returns `null` (meaning "unlimited") for them. Everyone
+ * else goes through the atomic `consumeCredit`. Use this from tool routes so a
+ * single call handles both the metered and unlimited cases.
+ *
+ * @returns remaining balance for metered roles, or `null` when unlimited.
+ */
+export async function spendCredit(
+  uid: string,
+  role: Role,
+  cost = 1,
+): Promise<number | null> {
+  if (isUnlimitedCredits(role)) return null;
+  return consumeCredit(uid, cost);
 }
 
 /** Read the current balance (provisioning the account lazily if missing). */

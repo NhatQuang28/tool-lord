@@ -1,5 +1,5 @@
 import { Sparkles } from "lucide-react";
-import { enabledTools } from "@/modules/registry";
+import { enabledTools, listedTools } from "@/modules/registry";
 import { SiteNav } from "@/components/SiteNav";
 import { ToolGrid } from "@/components/ToolGrid";
 import { JsonLd } from "@/components/JsonLd";
@@ -8,7 +8,7 @@ import { toolsItemListJsonLd } from "@/lib/seo";
 export default function HomePage() {
   return (
     <>
-      <JsonLd data={toolsItemListJsonLd(enabledTools)} />
+      <JsonLd data={toolsItemListJsonLd(listedTools)} />
       <SiteNav />
       <main className="page">
         <section className="container hero">

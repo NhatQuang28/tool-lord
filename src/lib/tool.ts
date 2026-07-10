@@ -7,6 +7,8 @@
  * consistent. Adding a new tool = create a module + register it. Nothing else
  * needs to know about the tool.
  */
+import type { Role } from "@/lib/roles";
+
 export interface ToolDefinition {
   /** URL segment, e.g. "message-cipher" -> /tools/message-cipher */
   slug: string;
@@ -30,4 +32,12 @@ export interface ToolDefinition {
    * should gate access as well. Default (undefined/false) = public.
    */
   requiresAuth?: boolean;
+  /**
+   * Minimum role required to see and use this tool. When set, the home grid
+   * only shows the card to users at or above this role, and the tool's page
+   * (via <RoleGate>) and API route (via requireRole) must enforce it too.
+   * Implies `requiresAuth` (a role always means a signed-in user). Omit for
+   * tools available to any signed-in / public user.
+   */
+  minRole?: Role;
 }

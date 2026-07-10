@@ -6,11 +6,12 @@
  * auth-state resolution to avoid flashing the wrong state.
  */
 import Link from "next/link";
-import { LogIn, LogOut } from "lucide-react";
+import { LogIn, LogOut, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/modules/auth/AuthProvider";
+import { ROLE_LABEL } from "@/lib/roles";
 
 export function AuthMenu() {
-  const { user, loading, logout } = useAuth();
+  const { user, role, loading, logout, hasRole } = useAuth();
 
   if (loading) return null;
 
@@ -27,9 +28,24 @@ export function AuthMenu() {
 
   return (
     <div className="auth-nav-user">
+      {hasRole("admin") && (
+        <Link
+          href="/tools/admin"
+          className="icon-btn"
+          aria-label="Trang quản trị"
+          title="Trang quản trị"
+        >
+          <ShieldCheck size={18} />
+        </Link>
+      )}
       <span className="auth-nav-name" title={label}>
         {label}
       </span>
+      {role !== "user" && (
+        <span className="auth-nav-role" title={`Vai trò: ${ROLE_LABEL[role]}`}>
+          {ROLE_LABEL[role]}
+        </span>
+      )}
       <button
         type="button"
         className="icon-btn"

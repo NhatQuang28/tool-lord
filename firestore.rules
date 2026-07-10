@@ -8,15 +8,20 @@ rules_version = '2';
 // Document ID: {uid}  (the Firebase Auth uid)
 // Fields:
 //   - credits: number   (required) - remaining quota for resource-heavy tools
+//   - role: string       (optional) - "user" | "manager" | "admin"; defaults to
+//                         "user" when absent. Mirrored into the Firebase custom
+//                         claim `role` (see src/lib/auth/roles.server.ts).
 //   - createdAt: timestamp (required, immutable) - when the account doc was made
 //   - updatedAt: timestamp (optional) - last server mutation
 //
-// WRITE MODEL (critical): the `credits` balance is mutated ONLY on the server
-// via the Firebase Admin SDK, which BYPASSES these rules entirely. Therefore
-// clients are never allowed to write this collection — they may only READ their
-// own document to display the remaining balance. This makes client-side credit
-// tampering impossible by construction, and the server enforces atomicity with
-// transactions (see src/lib/credits.ts) to prevent race-condition double-spend.
+// WRITE MODEL (critical): both `credits` and `role` are mutated ONLY on the
+// server via the Firebase Admin SDK, which BYPASSES these rules entirely.
+// Therefore clients are never allowed to write this collection — they may only
+// READ their own document. This makes client-side credit/role tampering
+// impossible by construction (a client cannot escalate its own role), and the
+// server enforces atomicity with transactions (see src/lib/credits.ts) to
+// prevent race-condition double-spend. Role enforcement never trusts the client:
+// it reads the role from the verified ID token / Firestore on the server.
 // ===============================================================
 
 service cloud.firestore {

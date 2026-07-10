@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { enabledTools } from "@/modules/registry";
+import { listedTools } from "@/modules/registry";
 import { SITE_URL, toolPath } from "@/lib/seo";
 
 /**
@@ -26,7 +26,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  const toolRoutes: MetadataRoute.Sitemap = enabledTools.map((tool) => ({
+  const toolRoutes: MetadataRoute.Sitemap = listedTools.map((tool) => ({
     url: `${SITE_URL}${toolPath(tool)}`,
     lastModified: now,
     changeFrequency: "weekly",
