@@ -3,10 +3,11 @@
 // client boundary, so it renders client-side through that boundary. Keeping it out
 // of the client-entry set avoids Next's serializable-props check on onCountChange.
 import { useEffect, useState } from "react";
-import { Pencil, Trash2, Eye, RotateCcw, User } from "lucide-react";
+import { User, Send } from "lucide-react";
 import { useAuth } from "@/modules/auth/AuthProvider";
 import { VoteButtons } from "./VoteButtons";
 import { feedbackGet, feedbackSend } from "./client";
+import { timeAgo } from "./format";
 import {
   MAX_COMMENT_LEN,
   type CommentDto,
@@ -108,19 +109,10 @@ export function CommentList({
       ) : (
         comments.map((c) => (
           <div key={c.id} className={`fb-comment ${c.deleted ? "fb-deleted" : ""}`}>
-            <VoteButtons score={c.score} myVote={c.myVote} onVote={(v) => vote(c, v)} disabled={!user} />
+            <span className="fb-avatar sm" aria-hidden="true">
+              <User size={16} strokeWidth={2.2} />
+            </span>
             <div className="fb-comment-body">
-              <div className="fb-card-head">
-                <span className="fb-anon">
-                  <User size={13} strokeWidth={2.2} /> Ẩn danh
-                </span>
-                {c.deleted ? <span className="fb-badge deleted">Đã ẩn</span> : null}
-                {isManager && c.author ? (
-                  <span className="fb-author" title={c.author.uid}>
-                    {c.author.email ?? c.author.displayName ?? c.author.uid}
-                  </span>
-                ) : null}
-              </div>
               {editingId === c.id ? (
                 <div className="fb-edit">
                   <textarea
@@ -140,22 +132,41 @@ export function CommentList({
                   </div>
                 </div>
               ) : (
-                <p className="fb-content">{c.content}</p>
+                <div className="fb-bubble">
+                  <div className="fb-bubble-head">
+                    <span className="fb-name">Ẩn danh</span>
+                    {c.deleted ? <span className="fb-badge deleted">Đã ẩn</span> : null}
+                    {isManager && c.author ? (
+                      <span className="fb-author" title={c.author.uid}>
+                        {c.author.email ?? c.author.displayName ?? c.author.uid}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="fb-bubble-text">{c.content}</p>
+                </div>
               )}
-              <div className="fb-card-actions">
+              <div className="fb-comment-actions">
+                <VoteButtons variant="compact" score={c.score} myVote={c.myVote} onVote={(v) => vote(c, v)} disabled={!user} />
+                <time className="fb-time">{timeAgo(c.createdAt)}</time>
                 {c.mine && editingId !== c.id ? (
                   <>
-                    <button type="button" className="fb-link" onClick={() => { setEditingId(c.id); setEditDraft(c.content); }}>
-                      <Pencil size={14} strokeWidth={2.2} /> Sửa
+                    <button
+                      type="button"
+                      className="fb-link"
+                      onClick={() => {
+                        setEditingId(c.id);
+                        setEditDraft(c.content);
+                      }}
+                    >
+                      Sửa
                     </button>
                     <button type="button" className="fb-link danger" onClick={() => remove(c)}>
-                      <Trash2 size={14} strokeWidth={2.2} /> Xóa
+                      Xóa
                     </button>
                   </>
                 ) : null}
                 {isManager ? (
                   <button type="button" className="fb-link" onClick={() => patch(c, { action: c.deleted ? "restore" : "hide" })}>
-                    {c.deleted ? <RotateCcw size={14} strokeWidth={2.2} /> : <Eye size={14} strokeWidth={2.2} />}{" "}
                     {c.deleted ? "Khôi phục" : "Ẩn"}
                   </button>
                 ) : null}
@@ -168,18 +179,21 @@ export function CommentList({
       {error ? <p className="fb-error">{error}</p> : null}
 
       {user ? (
-        <div className="fb-comment-add">
-          <textarea
-            className="fb-textarea"
-            placeholder="Viết bình luận…"
-            value={draft}
-            maxLength={MAX_COMMENT_LEN}
-            rows={2}
-            onChange={(e) => setDraft(e.target.value)}
-          />
-          <div className="fb-edit-actions">
-            <button type="button" className="btn primary" disabled={!draft.trim()} onClick={add}>
-              Gửi
+        <div className="fb-comment-compose">
+          <span className="fb-avatar sm" aria-hidden="true">
+            <User size={16} strokeWidth={2.2} />
+          </span>
+          <div className="fb-comment-inputwrap">
+            <textarea
+              className="fb-comment-input"
+              placeholder="Viết bình luận…"
+              value={draft}
+              maxLength={MAX_COMMENT_LEN}
+              rows={1}
+              onChange={(e) => setDraft(e.target.value)}
+            />
+            <button type="button" className="fb-send-btn" aria-label="Gửi bình luận" disabled={!draft.trim()} onClick={add}>
+              <Send size={16} strokeWidth={2.2} />
             </button>
           </div>
         </div>

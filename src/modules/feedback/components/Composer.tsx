@@ -3,10 +3,10 @@
 // so it renders in the client bundle through that boundary. Keeping it out of the
 // client-entry set avoids Next's serializable-props check on its onSubmit callback.
 import { useState } from "react";
-import { Send } from "lucide-react";
+import { Send, User } from "lucide-react";
 import { MAX_POST_LEN } from "@/modules/feedback/types";
 
-/** Text box for creating a post. `onSubmit` returns a rejected promise on failure. */
+/** Facebook-style "create post" card. `onSubmit` returns a rejected promise on failure. */
 export function Composer({ onSubmit }: { onSubmit: (content: string) => Promise<void> }) {
   const [content, setContent] = useState("");
   const [busy, setBusy] = useState(false);
@@ -29,14 +29,19 @@ export function Composer({ onSubmit }: { onSubmit: (content: string) => Promise<
 
   return (
     <div className="fb-composer">
-      <textarea
-        className="fb-textarea"
-        placeholder="Chia sẻ góp ý của bạn…"
-        value={content}
-        maxLength={MAX_POST_LEN}
-        rows={3}
-        onChange={(e) => setContent(e.target.value)}
-      />
+      <div className="fb-composer-top">
+        <span className="fb-avatar" aria-hidden="true">
+          <User size={20} strokeWidth={2.2} />
+        </span>
+        <textarea
+          className="fb-textarea"
+          placeholder="Chia sẻ góp ý của bạn…"
+          value={content}
+          maxLength={MAX_POST_LEN}
+          rows={3}
+          onChange={(e) => setContent(e.target.value)}
+        />
+      </div>
       {error ? <p className="fb-error">{error}</p> : null}
       <div className="fb-composer-actions">
         <span className="fb-count">
