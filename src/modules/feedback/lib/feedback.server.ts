@@ -178,6 +178,14 @@ function applyCursor(sort: SortOrder, q: Query, cursor: string | null): Query {
   } catch {
     throw new FeedbackError(400, "Con trỏ phân trang không hợp lệ.");
   }
+  const minLen = sort === "top" ? 2 : 1;
+  if (
+    !Array.isArray(payload) ||
+    payload.length < minLen ||
+    !payload.every((n) => typeof n === "number" && Number.isFinite(n))
+  ) {
+    throw new FeedbackError(400, "Con trỏ phân trang không hợp lệ.");
+  }
   return sort === "top"
     ? q.startAfter(payload[0], Timestamp.fromMillis(payload[1]))
     : q.startAfter(Timestamp.fromMillis(payload[0]));
@@ -344,8 +352,10 @@ export async function moderatePost(
     patch.approved = false;
   } else if (action === "hide") {
     patch.status = "deleted";
-  } else {
+  } else if (action === "restore") {
     patch.status = "visible";
+  } else {
+    throw new FeedbackError(400, "Hành động không hợp lệ.");
   }
   await ref.update(patch);
   return postDtoForCaller(caller, ref);
@@ -420,6 +430,8 @@ export async function moderateComment(
 ): Promise<CommentDto> {
   if (!hasAtLeast(caller.role, "manager"))
     throw new FeedbackError(403, "Bạn không có quyền kiểm duyệt.");
+  if (action !== "hide" && action !== "restore")
+    throw new FeedbackError(400, "Hành động không hợp lệ.");
   const { ref } = await requireComment(postId, cid);
   await ref.update({ status: action === "hide" ? "deleted" : "visible" });
   return commentDtoForCaller(caller, ref);
@@ -445,6 +457,7 @@ async function voteOn(itemRef: DocumentReference, uid: string, value: VoteValue)
   return adminDb.runTransaction(async (tx) => {
     const itemSnap = await tx.get(itemRef);
     if (!itemSnap.exists) throw new FeedbackError(404, "Mục này không còn tồn tại.");
+    if (itemSnap.get("status") === "deleted") throw new FeedbackError(404, "Mục này không còn tồn tại.");
     const voteSnap = await tx.get(voteRef);
     const stored = voteSnap.exists ? voteSnap.get("value") : 0;
     const oldValue: MyVote = stored === 1 || stored === -1 ? stored : 0;

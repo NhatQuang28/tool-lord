@@ -43,6 +43,7 @@ export function PostCard({
     const res = await feedbackSend(`/api/feedback/${post.id}`, "PATCH", body);
     const data = await res.json();
     if (res.ok && data.post) onChanged(data.post);
+    else onVoteError(data.error ?? "Không cập nhật được bài.");
   }
 
   async function remove() {
@@ -50,6 +51,7 @@ export function PostCard({
     const res = await feedbackSend(`/api/feedback/${post.id}`, "DELETE");
     const data = await res.json();
     if (res.ok && data.post) onChanged(data.post);
+    else onVoteError(data.error ?? "Không xóa được bài.");
   }
 
   async function saveEdit() {
@@ -58,6 +60,8 @@ export function PostCard({
     if (res.ok && data.post) {
       onChanged(data.post);
       setEditing(false);
+    } else {
+      onVoteError(data.error ?? "Không lưu được bài.");
     }
   }
 

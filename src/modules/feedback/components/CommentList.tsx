@@ -79,6 +79,7 @@ export function CommentList({
     const res = await feedbackSend(`/api/feedback/${postId}/comments/${c.id}`, "PATCH", body);
     const data = await res.json();
     if (res.ok && data.comment) replace(data.comment);
+    else setError(data.error ?? "Không cập nhật được bình luận.");
   }
 
   async function remove(c: CommentDto) {
@@ -86,6 +87,7 @@ export function CommentList({
     const res = await feedbackSend(`/api/feedback/${postId}/comments/${c.id}`, "DELETE");
     const data = await res.json();
     if (res.ok && data.comment) replace(data.comment);
+    else setError(data.error ?? "Không xóa được bình luận.");
   }
 
   async function saveEdit(c: CommentDto) {
@@ -94,6 +96,8 @@ export function CommentList({
     if (res.ok && data.comment) {
       replace(data.comment);
       setEditingId(null);
+    } else {
+      setError(data.error ?? "Không lưu được bình luận.");
     }
   }
 
