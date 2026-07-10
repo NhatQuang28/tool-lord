@@ -1,5 +1,8 @@
 // src/modules/feedback/components/PostCard.tsx
-"use client";
+// No "use client" directive: imported only by the client component FeedbackFeed
+// (and it in turn imports client-only children), so it lives in the client bundle
+// through that boundary. Keeping it out of the client-entry set avoids Next's
+// serializable-props check on its onChanged/onVoteError callbacks.
 import { useState } from "react";
 import { MessageSquare, Pencil, Trash2, BadgeCheck, Eye, RotateCcw, User } from "lucide-react";
 import { useAuth } from "@/modules/auth/AuthProvider";

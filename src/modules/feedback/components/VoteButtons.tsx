@@ -1,5 +1,8 @@
 // src/modules/feedback/components/VoteButtons.tsx
-"use client";
+// No "use client" directive: this component is only imported by other client
+// components (PostCard, CommentList), so it lives in the client bundle via that
+// boundary. Marking it a client entry would trip Next's serializable-props check
+// on its function props (onVote) — which are legitimate client→client callbacks.
 import { ChevronUp, ChevronDown } from "lucide-react";
 import type { MyVote, VoteValue } from "@/modules/feedback/types";
 

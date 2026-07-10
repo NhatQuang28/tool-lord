@@ -1,5 +1,7 @@
 // src/modules/feedback/components/Composer.tsx
-"use client";
+// No "use client" directive: imported only by the client component FeedbackFeed,
+// so it renders in the client bundle through that boundary. Keeping it out of the
+// client-entry set avoids Next's serializable-props check on its onSubmit callback.
 import { useState } from "react";
 import { Send } from "lucide-react";
 import { MAX_POST_LEN } from "@/modules/feedback/types";
