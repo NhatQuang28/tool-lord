@@ -13,7 +13,11 @@ export default function FeedbackPage() {
     <>
       <SiteNav back={{ href: "/", label: "Trang chủ" }} title="Góp ý" />
       <main className="page">
-        <div className="container">
+        <div className="container fb-container">
+          <header className="fb-page-head">
+            <h1>Góp ý</h1>
+            <p>Chia sẻ góp ý, đề xuất và bình luận. Ai cũng xem được; đăng nhập để tham gia.</p>
+          </header>
           <FeedbackFeed />
         </div>
       </main>

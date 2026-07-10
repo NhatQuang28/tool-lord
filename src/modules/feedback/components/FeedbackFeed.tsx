@@ -2,6 +2,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { LogIn, MessageSquarePlus } from "lucide-react";
 import { useAuth } from "@/modules/auth/AuthProvider";
 import { Composer } from "./Composer";
 import { PostCard } from "./PostCard";
@@ -69,9 +70,15 @@ export function FeedbackFeed() {
         <Composer onSubmit={createPost} />
       ) : (
         <div className="fb-signin-hint">
-          <p>Đăng nhập để đăng bài, bình luận và vote.</p>
-          <Link href="/login" className="btn primary">
-            Đăng nhập
+          <span className="fb-signin-icon" aria-hidden="true">
+            <MessageSquarePlus size={22} strokeWidth={2} />
+          </span>
+          <div className="fb-signin-text">
+            <strong>Tham gia góp ý</strong>
+            <span>Đăng nhập để đăng bài, bình luận và vote. Bạn vẫn có thể xem mọi góp ý mà không cần đăng nhập.</span>
+          </div>
+          <Link href="/login" className="btn primary fb-signin-cta">
+            <LogIn size={17} strokeWidth={2.2} /> Đăng nhập
           </Link>
         </div>
       )}
