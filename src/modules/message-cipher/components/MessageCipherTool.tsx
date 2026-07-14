@@ -171,6 +171,13 @@ export function MessageCipherTool() {
       await navigator.clipboard.writeText(value);
       setCopied(what);
       setTimeout(() => setCopied(null), 1200);
+      // After copying the result, clear the text (both encrypt & decrypt modes)
+      // so the next message starts fresh. Clearing input empties the output too.
+      if (what === "output") {
+        setInput("");
+        setOutput("");
+        setError("");
+      }
     } catch {
       /* clipboard may be blocked; ignore */
     }

@@ -74,6 +74,13 @@ export const STYLES: CipherStyle[] = [
     ),
   },
   {
+    id: "kanji",
+    name: "Chữ Hán (Nhật)",
+    sample: "一丁丂七",
+    // CJK Unified Ideographs block: 256 glyphs -> 1 glyph per byte (compact).
+    glyphs: range(0x4e00, 256),
+  },
+  {
     id: "binary",
     name: "Nhị phân",
     sample: "0101",
