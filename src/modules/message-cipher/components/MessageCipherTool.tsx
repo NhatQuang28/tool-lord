@@ -257,7 +257,7 @@ export function MessageCipherTool() {
         </label>
         <div className="key-row">
           <input
-            type="text"
+            type="password"
             value={userKey}
             onChange={(e) => setUserKey(e.target.value)}
             placeholder="Dán key vào đây hoặc bấm Tạo key"

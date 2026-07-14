@@ -492,6 +492,7 @@ a {
 
 textarea,
 input[type="text"],
+input[type="password"],
 select {
   width: 100%;
   background: var(--field-bg);
@@ -510,6 +511,7 @@ select {
 
 textarea:focus,
 input[type="text"]:focus,
+input[type="password"]:focus,
 select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 4px var(--ring);
