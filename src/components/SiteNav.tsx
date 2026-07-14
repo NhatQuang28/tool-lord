@@ -33,6 +33,9 @@ export function SiteNav({
         )}
         {title ? <span className="nav-title">{title}</span> : null}
         <div className="nav-actions">
+          <Link href="/feedback" className="nav-link">
+            Góp ý
+          </Link>
           <AuthMenu />
           <ThemeToggle />
         </div>
