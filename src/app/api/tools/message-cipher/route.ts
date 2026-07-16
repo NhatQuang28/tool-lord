@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, clientIp, tooManyRequests } from "@/lib/rateLimit";
 import {
   combineKeys,
   decryptMessage,
@@ -9,10 +10,28 @@ import type {
   CipherResponse,
 } from "@/modules/message-cipher/types";
 
-// The web's own secret key lives only on the server.
-const WEB_SECRET_KEY = process.env.WEB_SECRET_KEY ?? "tool-lord-fallback-secret";
+// The web's own secret key lives only on the server. No hardcoded fallback: a
+// committed default would silently weaken every ciphertext in production if the
+// env var were ever missing, so we fail loudly instead (checked per request).
+const WEB_SECRET_KEY = process.env.WEB_SECRET_KEY;
+
+// Cap input size so this unauthenticated, CPU-bound endpoint can't be abused
+// with huge payloads.
+const MAX_TEXT_LEN = 20_000;
 
 export async function POST(req: NextRequest) {
+  // Unauthenticated + does per-byte crypto work → throttle by IP.
+  if (!(await checkRateLimit("message-cipher", clientIp(req), 60, "1 m"))) {
+    return tooManyRequests();
+  }
+
+  if (!WEB_SECRET_KEY) {
+    return NextResponse.json<CipherResponse>(
+      { result: "", error: "Máy chủ chưa được cấu hình khóa bí mật." },
+      { status: 500 },
+    );
+  }
+
   let body: CipherRequest;
   try {
     body = (await req.json()) as CipherRequest;
@@ -34,6 +53,12 @@ export async function POST(req: NextRequest) {
   if (typeof text !== "string" || typeof styleId !== "string") {
     return NextResponse.json<CipherResponse>(
       { result: "", error: "Thiếu 'text' hoặc 'styleId'." },
+      { status: 400 },
+    );
+  }
+  if (text.length > MAX_TEXT_LEN) {
+    return NextResponse.json<CipherResponse>(
+      { result: "", error: `Nội dung tối đa ${MAX_TEXT_LEN.toLocaleString("vi-VN")} ký tự.` },
       { status: 400 },
     );
   }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/requireUser";
+import { checkRateLimit, tooManyRequests } from "@/lib/rateLimit";
 import {
   resolveCaller,
   listPosts,
@@ -32,6 +33,9 @@ export async function POST(req: NextRequest) {
   const user = await requireUser(req);
   if (!user) {
     return NextResponse.json<CreatePostResponse>({ error: "Chưa đăng nhập." }, { status: 401 });
+  }
+  if (!(await checkRateLimit("feedback-post", user.uid, 10, "1 m"))) {
+    return tooManyRequests();
   }
   try {
     const body = (await req.json()) as CreatePostRequest;

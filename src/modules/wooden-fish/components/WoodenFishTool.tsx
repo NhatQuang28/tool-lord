@@ -11,6 +11,10 @@ const MUTED_KEY = "go-mo:muted";
 /** Every N knocks, the Buddha manifests. */
 const BLESS_EVERY = 100;
 
+/** Every N knocks, the grand Tây Du Ký milestone manifests (bigger than the
+ *  Buddha blessing — a reward for the long haul). */
+const MEGA_BLESS_EVERY = 1000;
+
 /** Auspicious phrases that float up on each knock. */
 const PHRASES = [
   "Phước +1",
@@ -41,12 +45,14 @@ export function WoodenFishTool() {
   const [muted, setMuted] = useState(false);
   const [pops, setPops] = useState<Pop[]>([]);
   const [blessing, setBlessing] = useState(false);
+  const [megaBlessing, setMegaBlessing] = useState(false);
 
   const audioRef = useRef<AudioContext | null>(null);
   const idRef = useRef(0);
   const fishRef = useRef<HTMLDivElement>(null);
   const meritRef = useRef(0);
   const blessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const megaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Restore saved merit + sound preference on first mount.
   useEffect(() => {
@@ -140,8 +146,14 @@ export function WoodenFishTool() {
     } catch {
       /* ignore */
     }
-    // Every 100 knocks, the Buddha manifests for 4 seconds.
-    if (n % BLESS_EVERY === 0) {
+    // Every 1000 knocks: the grand Tây Du Ký milestone (7s). Otherwise every
+    // 100 knocks the Buddha manifests (4s). 1000 is also a multiple of 100, so
+    // the grander reward takes precedence — the two never stack.
+    if (n % MEGA_BLESS_EVERY === 0) {
+      setMegaBlessing(true);
+      if (megaTimerRef.current) clearTimeout(megaTimerRef.current);
+      megaTimerRef.current = setTimeout(() => setMegaBlessing(false), 7000);
+    } else if (n % BLESS_EVERY === 0) {
       setBlessing(true);
       if (blessTimerRef.current) clearTimeout(blessTimerRef.current);
       blessTimerRef.current = setTimeout(() => setBlessing(false), 4000);
@@ -303,6 +315,45 @@ export function WoodenFishTool() {
               transition={{ delay: 0.3, duration: 0.5 }}
             >
               Phật Tổ chứng giám · Công đức viên mãn
+            </motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Every 1000 knocks: the grand Tây Du Ký milestone — a bigger reward
+          with a golden burst, gently drifting image and celebratory line. */}
+      <AnimatePresence>
+        {megaBlessing && (
+          <motion.div
+            className="gomo-mega"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="gomo-mega-rays" aria-hidden />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <motion.img
+              className="gomo-mega-img"
+              src="/tay-du-ky.png"
+              alt="Thầy trò Đường Tăng thỉnh kinh"
+              draggable={false}
+              initial={
+                reduce ? { opacity: 0 } : { opacity: 0, scale: 0.6, y: 40 }
+              }
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
+              transition={{ type: "spring", stiffness: 110, damping: 15 }}
+            />
+            <motion.p
+              className="gomo-mega-text"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ delay: 0.35, duration: 0.55 }}
+            >
+              🙏 {merit.toLocaleString("vi-VN")} tiếng mõ · Tây Thiên thỉnh
+              kinh · Công đức vẹn toàn 🙏
             </motion.p>
           </motion.div>
         )}

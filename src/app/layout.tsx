@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 import { AuthProvider } from "@/modules/auth/AuthProvider";
 import { JsonLd } from "@/components/JsonLd";
@@ -80,16 +81,19 @@ export const viewport: Viewport = {
 // Applied before paint so the saved theme is set with no flash of the wrong mode.
 const themeScript = `(function(){try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();`;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // CSP nonce set by middleware.ts; applied to our inline scripts so they run
+  // under the strict Content-Security-Policy.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang={SITE_LANG} className={inter.variable} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        <JsonLd data={[websiteJsonLd(), organizationJsonLd()]} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <JsonLd data={[websiteJsonLd(), organizationJsonLd()]} nonce={nonce} />
       </head>
       <body>
         <AuthProvider>{children}</AuthProvider>

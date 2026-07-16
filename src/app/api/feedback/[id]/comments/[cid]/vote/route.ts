@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/requireUser";
+import { checkRateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { voteComment, FeedbackError } from "@/modules/feedback/lib/feedback.server";
 import type { VoteRequest, VoteResponse } from "@/modules/feedback/types";
 
@@ -10,6 +11,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       { upCount: 0, downCount: 0, score: 0, myVote: 0, error: "Chưa đăng nhập." },
       { status: 401 },
     );
+  }
+  if (!(await checkRateLimit("feedback-vote", user.uid, 60, "1 m"))) {
+    return tooManyRequests();
   }
   try {
     const { id, cid } = await ctx.params;

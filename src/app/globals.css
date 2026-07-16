@@ -914,6 +914,74 @@ select {
   }
 }
 
+/* Grand Tây Du Ký milestone (every 1000 knocks) — bigger than the blessing */
+.gomo-mega {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at center,
+    rgba(90, 55, 0, 0.5),
+    rgba(0, 0, 0, 0.78)
+  );
+}
+.gomo-mega-rays {
+  position: absolute;
+  width: min(160vh, 1500px);
+  height: min(160vh, 1500px);
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle,
+      rgba(255, 244, 190, 0.72) 0%,
+      rgba(255, 196, 74, 0.36) 30%,
+      rgba(255, 150, 40, 0) 62%
+    ),
+    repeating-conic-gradient(
+      rgba(255, 232, 150, 0.5) 0deg 4deg,
+      rgba(255, 232, 150, 0) 4deg 10deg
+    );
+  filter: blur(1.5px);
+  animation:
+    gomo-spin 9s linear infinite,
+    gomo-pulse 2s ease-in-out infinite;
+}
+.gomo-mega-img {
+  position: relative;
+  height: min(72vh, 640px);
+  width: auto;
+  max-width: 94vw;
+  border-radius: 16px;
+  filter: drop-shadow(0 0 60px rgba(255, 208, 90, 0.95))
+    drop-shadow(0 16px 40px rgba(0, 0, 0, 0.55));
+  animation: gomo-mega-float 3.4s ease-in-out infinite;
+}
+.gomo-mega-text {
+  position: absolute;
+  bottom: 5vh;
+  padding: 0 18px;
+  text-align: center;
+  color: #fff2c4;
+  font-weight: 900;
+  font-size: clamp(20px, 3.4vw, 34px);
+  letter-spacing: 0.01em;
+  text-shadow:
+    0 2px 16px rgba(190, 120, 0, 0.98),
+    0 0 30px rgba(255, 200, 80, 0.7);
+}
+@keyframes gomo-mega-float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-14px) scale(1.02);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1661,7 +1729,9 @@ select {
 /* Stat row (reactions / comment count) */
 .fb-stat-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.82rem; color: var(--text-secondary); }
 .fb-stat-score { display: inline-flex; align-items: center; gap: 6px; }
-.fb-reaction { display: grid; place-items: center; width: 18px; height: 18px; border-radius: var(--radius-pill); background: var(--accent); color: var(--on-accent); }
+.fb-reaction { display: grid; place-items: center; width: 18px; height: 18px; border-radius: var(--radius-pill); color: var(--on-accent); }
+.fb-reaction.up { background: var(--accent); }
+.fb-reaction.down { background: var(--danger); margin-left: 6px; }
 .fb-stat-comments { border: none; background: transparent; color: var(--text-secondary); cursor: pointer; font: inherit; padding: 0; }
 .fb-stat-comments:hover { text-decoration: underline; }
 
@@ -1680,14 +1750,14 @@ select {
 .fb-actionbtn.active.up { color: var(--accent); }
 .fb-actionbtn.active.down { color: var(--danger); }
 
-/* Compact votes (comments) */
-.fb-votes { display: inline-flex; align-items: center; gap: 2px; }
-.fb-vote { display: grid; place-items: center; width: 24px; height: 24px; border: none; background: transparent; color: var(--text-secondary); border-radius: var(--radius-pill); cursor: pointer; }
+/* Compact votes (comments) — two independent ▲ n / ▼ n pills */
+.fb-votes { display: inline-flex; align-items: center; gap: 6px; }
+.fb-vote { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border: none; background: transparent; color: var(--text-secondary); border-radius: var(--radius-pill); cursor: pointer; }
 .fb-vote:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
 .fb-vote.active.up { color: var(--accent); }
 .fb-vote.active.down { color: var(--danger); }
 .fb-vote:disabled { opacity: 0.45; cursor: default; }
-.fb-score { font-weight: 700; font-size: 0.8rem; min-width: 14px; text-align: center; color: var(--text-secondary); }
+.fb-vote-count { font-weight: 700; font-size: 0.78rem; line-height: 1; }
 
 /* Comments */
 .fb-comments { margin-top: 2px; padding-top: var(--space-3); border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: var(--space-3); }
@@ -1709,8 +1779,11 @@ select {
   transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
 .fb-comment-inputwrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-.fb-comment-input { flex: 1; resize: none; border: none; background: transparent; color: var(--text); font: inherit; line-height: 1.45; padding: 8px 0; max-height: 120px; }
-.fb-comment-input:focus { outline: none; }
+/* Reset the global `textarea` base (168px min-height + its own border/focus
+   ring) so the composer isn't a giant box with a ring nested inside the wrap's
+   ring — the wrap owns the outline via :focus-within. */
+.fb-comment-input { flex: 1; resize: none; border: none; background: transparent; color: var(--text); font: inherit; line-height: 1.45; padding: 8px 0; min-height: 0; max-height: 120px; }
+.fb-comment-input:focus { outline: none; box-shadow: none; border-color: transparent; }
 .fb-comment-input::placeholder { color: var(--text-tertiary); }
 .fb-send-btn { flex: none; width: 34px; height: 34px; border: none; border-radius: var(--radius-pill); background: transparent; color: var(--accent); display: grid; place-items: center; cursor: pointer; }
 .fb-send-btn:hover:not(:disabled) { background: var(--accent-soft); }

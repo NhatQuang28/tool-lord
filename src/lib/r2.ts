@@ -57,12 +57,22 @@ export function bucket(): string {
   return env("R2_BUCKET");
 }
 
-/** Presigned PUT URL for uploading one encrypted blob to `objectKey`. */
-export function presignPut(objectKey: string): Promise<string> {
+/**
+ * Presigned PUT URL for uploading one encrypted blob to `objectKey`.
+ *
+ * `contentLength` is BAKED INTO THE SIGNATURE: the browser's PUT must send a
+ * body of exactly this many bytes or R2 rejects it with a signature mismatch.
+ * This is what stops a client from declaring a tiny `size` to pass the server's
+ * size/quota checks and then uploading an arbitrarily large blob (storage/cost
+ * abuse). The client always reports the exact ciphertext byte length, so
+ * legitimate uploads match precisely.
+ */
+export function presignPut(objectKey: string, contentLength: number): Promise<string> {
   const cmd = new PutObjectCommand({
     Bucket: bucket(),
     Key: objectKey,
     ContentType: BLOB_CONTENT_TYPE,
+    ContentLength: contentLength,
   });
   return getSignedUrl(r2(), cmd, { expiresIn: UPLOAD_TTL });
 }

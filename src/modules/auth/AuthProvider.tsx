@@ -92,6 +92,27 @@ async function syncRole(user: User): Promise<Role> {
   }
 }
 
+/**
+ * Mint (on sign-in) or clear (on sign-out) the HttpOnly session cookie the SSE
+ * streams authenticate with. Best-effort: if it fails, realtime simply falls
+ * back to the anonymous public stream — REST calls still use Bearer tokens.
+ */
+async function syncSessionCookie(user: User | null): Promise<void> {
+  try {
+    if (user) {
+      const token = await user.getIdToken();
+      await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } else {
+      await fetch("/api/auth/session", { method: "DELETE" });
+    }
+  } catch {
+    /* ignore — the stream degrades gracefully to the public caller */
+  }
+}
+
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -102,6 +123,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let active = true;
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      if (!active) return;
+      // Mint/clear the HttpOnly session cookie BEFORE exposing the user, so the
+      // SSE streams (which re-subscribe on uid change) find the cookie in place.
+      await syncSessionCookie(u);
       if (!active) return;
       setUser(u);
       // Resolve the role before clearing `loading` so role-gated UI doesn't

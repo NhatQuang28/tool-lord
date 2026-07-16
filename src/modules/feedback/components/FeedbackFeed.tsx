@@ -7,6 +7,7 @@ import { useAuth } from "@/modules/auth/AuthProvider";
 import { Composer } from "./Composer";
 import { PostCard } from "./PostCard";
 import { feedbackGet, feedbackSend } from "./client";
+import { useFeedbackStream } from "./useFeedbackStream";
 import type { ListPostsResponse, PostDto, SortOrder } from "@/modules/feedback/types";
 
 export function FeedbackFeed() {
@@ -51,7 +52,9 @@ export function FeedbackFeed() {
     const res = await feedbackSend("/api/feedback", "POST", { content });
     const data = await res.json();
     if (!res.ok || !data.post) throw new Error(data.error ?? "Không đăng được bài.");
-    setPosts((prev) => [data.post as PostDto, ...prev]);
+    const created = data.post as PostDto;
+    // Dedupe in case the SSE stream already delivered this post.
+    setPosts((prev) => [created, ...prev.filter((p) => p.id !== created.id)]);
   }
 
   function onChanged(updated: PostDto) {
@@ -63,6 +66,30 @@ export function FeedbackFeed() {
       return prev.map((p) => (p.id === updated.id ? updated : p));
     });
   }
+
+  // Realtime: merge live post changes (new posts, vote/comment counts, edits,
+  // moderation) pushed over SSE. Only connect once auth has resolved so the
+  // token is attached and `myVote`/`mine`/author fields are correct.
+  useFeedbackStream(loading ? null : "/api/feedback/stream", user?.uid ?? null, {
+    post: (data) => {
+      const incoming = data as PostDto;
+      setPosts((prev) => {
+        if (incoming.deleted && !hasRole("manager")) {
+          return prev.filter((p) => p.id !== incoming.id);
+        }
+        const idx = prev.findIndex((p) => p.id === incoming.id);
+        if (idx !== -1) {
+          const next = [...prev];
+          next[idx] = incoming;
+          return next;
+        }
+        // Brand-new post: prepend only in "Mới nhất"; "Nổi bật" ordering is left
+        // to the next reload so we don't shove a 0-score post to the top.
+        return sort === "new" ? [incoming, ...prev] : prev;
+      });
+    },
+    remove: (id) => setPosts((prev) => prev.filter((p) => p.id !== id)),
+  });
 
   return (
     <div className="fb-feed">

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { requireUser } from "@/lib/auth/requireUser";
+import { checkRateLimit, tooManyRequests } from "@/lib/rateLimit";
 import { adminDb } from "@/lib/firebase/admin";
 import {
   presignPut,
@@ -47,6 +48,12 @@ export async function POST(req: NextRequest) {
       { id: "", uploads: [], error: "Chưa đăng nhập." },
       { status: 401 },
     );
+  }
+
+  // 1b. Throttle share creation per user (each call presigns URLs + a bucket
+  // usage scan, so it's relatively expensive).
+  if (!(await checkRateLimit("secret-image-create", user.uid, 10, "1 m"))) {
+    return tooManyRequests();
   }
 
   // 2. Parse + validate the (secret-free) metadata payload.
@@ -141,7 +148,9 @@ export async function POST(req: NextRequest) {
     uploads = await Promise.all(
       storedFiles.map(async (f) => ({
         objectKey: f.objectKey,
-        url: await presignPut(f.objectKey),
+        // Bind the exact declared size into the presigned URL so the actual
+        // upload can't exceed the size we validated above (see presignPut).
+        url: await presignPut(f.objectKey, f.size),
       })),
     );
   } catch (err) {

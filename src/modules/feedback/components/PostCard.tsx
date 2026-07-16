@@ -12,7 +12,8 @@ import {
   Eye,
   RotateCcw,
   User,
-  ThumbsUp,
+  ArrowUp,
+  ArrowDown,
   MoreHorizontal,
 } from "lucide-react";
 import { useAuth } from "@/modules/auth/AuthProvider";
@@ -20,6 +21,7 @@ import { VoteButtons } from "./VoteButtons";
 import { CommentList } from "./CommentList";
 import { feedbackSend } from "./client";
 import { timeAgo } from "./format";
+import { computeVoteDelta } from "@/modules/feedback/lib/votes";
 import { MAX_POST_LEN, type PostDto, type VoteValue } from "@/modules/feedback/types";
 
 /**
@@ -47,9 +49,22 @@ export function PostCard({
 
   async function vote(value: VoteValue) {
     if (!user) return onVoteError("Bạn cần đăng nhập để vote.");
+    // Optimistic: reflect the click instantly, then reconcile with the server
+    // (roll back to the original post if the request fails).
+    const delta = computeVoteDelta(post.myVote, value);
+    onChanged({
+      ...post,
+      upCount: post.upCount + delta.up,
+      downCount: post.downCount + delta.down,
+      score: post.upCount + delta.up - (post.downCount + delta.down),
+      myVote: delta.newValue,
+    });
     const res = await feedbackSend(`/api/feedback/${post.id}/vote`, "POST", { value });
     const data = await res.json();
-    if (!res.ok) return onVoteError(data.error ?? "Không vote được.");
+    if (!res.ok) {
+      onChanged(post);
+      return onVoteError(data.error ?? "Không vote được.");
+    }
     onChanged({ ...post, upCount: data.upCount, downCount: data.downCount, score: data.score, myVote: data.myVote });
   }
 
@@ -210,10 +225,14 @@ export function PostCard({
 
       <div className="fb-stat-row">
         <span className="fb-stat-score">
-          <span className="fb-reaction">
-            <ThumbsUp size={11} strokeWidth={2.6} />
+          <span className="fb-reaction up">
+            <ArrowUp size={11} strokeWidth={2.8} />
           </span>
-          {post.score}
+          {post.upCount}
+          <span className="fb-reaction down">
+            <ArrowDown size={11} strokeWidth={2.8} />
+          </span>
+          {post.downCount}
         </span>
         <button type="button" className="fb-stat-comments" onClick={() => setShowComments((s) => !s)}>
           {post.commentCount} bình luận
@@ -221,7 +240,14 @@ export function PostCard({
       </div>
 
       <div className="fb-actionbar">
-        <VoteButtons variant="bar" score={post.score} myVote={post.myVote} onVote={vote} disabled={!user} />
+        <VoteButtons
+          variant="bar"
+          upCount={post.upCount}
+          downCount={post.downCount}
+          myVote={post.myVote}
+          onVote={vote}
+          disabled={!user}
+        />
         <button type="button" className="fb-actionbtn" onClick={() => setShowComments((s) => !s)}>
           <MessageSquare size={18} strokeWidth={2.2} /> Bình luận
         </button>

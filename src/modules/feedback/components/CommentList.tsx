@@ -7,7 +7,9 @@ import { User, Send } from "lucide-react";
 import { useAuth } from "@/modules/auth/AuthProvider";
 import { VoteButtons } from "./VoteButtons";
 import { feedbackGet, feedbackSend } from "./client";
+import { useFeedbackStream } from "./useFeedbackStream";
 import { timeAgo } from "./format";
+import { computeVoteDelta } from "@/modules/feedback/lib/votes";
 import {
   MAX_COMMENT_LEN,
   type CommentDto,
@@ -46,6 +48,28 @@ export function CommentList({
     };
   }, [postId, user]);
 
+  // Realtime: merge live comment changes for this post pushed over SSE. The
+  // post's own commentCount is refreshed separately by the feed stream, so we
+  // only reconcile the visible bubbles here.
+  useFeedbackStream(`/api/feedback/${postId}/stream`, user?.uid ?? null, {
+    comment: (data) => {
+      const incoming = data as CommentDto;
+      setComments((prev) => {
+        if (incoming.deleted && !isManager) {
+          return prev.filter((c) => c.id !== incoming.id);
+        }
+        const idx = prev.findIndex((c) => c.id === incoming.id);
+        if (idx !== -1) {
+          const next = [...prev];
+          next[idx] = incoming;
+          return next;
+        }
+        return [...prev, incoming];
+      });
+    },
+    remove: (cid) => setComments((prev) => prev.filter((c) => c.id !== cid)),
+  });
+
   function replace(updated: CommentDto) {
     setComments((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
   }
@@ -54,26 +78,62 @@ export function CommentList({
     const content = draft.trim();
     if (!content) return;
     setError(null);
+
+    // Optimistic: show the comment instantly with a temp id, clear the box, then
+    // swap in the server's real DTO (or roll back + restore the draft on error).
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: CommentDto = {
+      id: tempId,
+      content,
+      deleted: false,
+      upCount: 0,
+      downCount: 0,
+      score: 0,
+      createdAt: Date.now(),
+      editedAt: null,
+      myVote: 0,
+      mine: true,
+    };
+    setComments((prev) => {
+      const next = [...prev, optimistic];
+      onCountChange(next.length);
+      return next;
+    });
+    setDraft("");
+
     try {
       const res = await feedbackSend(`/api/feedback/${postId}/comments`, "POST", { content });
       const data = await res.json();
       if (!res.ok || !data.comment) throw new Error(data.error ?? "Không gửi được bình luận.");
+      const real = data.comment as CommentDto;
       setComments((prev) => {
-        const next = [...prev, data.comment as CommentDto];
+        // The SSE stream may have already appended the real comment; drop any
+        // such duplicate before swapping the temp entry for the authoritative one.
+        const deduped = prev.filter((c) => c.id !== real.id);
+        return deduped.map((c) => (c.id === tempId ? real : c));
+      });
+    } catch (e) {
+      setComments((prev) => {
+        const next = prev.filter((c) => c.id !== tempId);
         onCountChange(next.length);
         return next;
       });
-      setDraft("");
-    } catch (e) {
+      setDraft(content);
       setError(e instanceof Error ? e.message : "Không gửi được bình luận.");
     }
   }
 
   async function vote(c: CommentDto, value: VoteValue) {
     if (!user) return setError("Bạn cần đăng nhập để vote.");
+    // Optimistic: update the comment instantly, then reconcile / roll back.
+    const delta = computeVoteDelta(c.myVote, value);
+    const up = c.upCount + delta.up;
+    const down = c.downCount + delta.down;
+    replace({ ...c, upCount: up, downCount: down, score: up - down, myVote: delta.newValue });
     const res = await feedbackSend(`/api/feedback/${postId}/comments/${c.id}/vote`, "POST", { value });
     const data = await res.json();
     if (res.ok) replace({ ...c, upCount: data.upCount, downCount: data.downCount, score: data.score, myVote: data.myVote });
+    else replace(c);
   }
 
   async function patch(c: CommentDto, body: unknown) {
@@ -104,10 +164,9 @@ export function CommentList({
 
   return (
     <div className="fb-comments">
-      {loading ? (
-        <p className="fb-empty">Đang tải bình luận…</p>
-      ) : (
-        comments.map((c) => (
+      {loading
+        ? null
+        : comments.map((c) => (
           <div key={c.id} className={`fb-comment ${c.deleted ? "fb-deleted" : ""}`}>
             <span className="fb-avatar sm" aria-hidden="true">
               <User size={16} strokeWidth={2.2} />
@@ -146,7 +205,14 @@ export function CommentList({
                 </div>
               )}
               <div className="fb-comment-actions">
-                <VoteButtons variant="compact" score={c.score} myVote={c.myVote} onVote={(v) => vote(c, v)} disabled={!user} />
+                <VoteButtons
+                  variant="compact"
+                  upCount={c.upCount}
+                  downCount={c.downCount}
+                  myVote={c.myVote}
+                  onVote={(v) => vote(c, v)}
+                  disabled={!user}
+                />
                 <time className="fb-time">{timeAgo(c.createdAt)}</time>
                 {c.mine && editingId !== c.id ? (
                   <>
@@ -173,8 +239,7 @@ export function CommentList({
               </div>
             </div>
           </div>
-        ))
-      )}
+          ))}
 
       {error ? <p className="fb-error">{error}</p> : null}
 

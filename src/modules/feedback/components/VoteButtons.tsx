@@ -3,26 +3,28 @@
 // components (PostCard, CommentList), so it lives in the client bundle via that
 // boundary. Marking it a client entry would trip Next's serializable-props check
 // on its function props (onVote) — which are legitimate client→client callbacks.
-import { ThumbsUp, ThumbsDown } from "lucide-react";
+import { ArrowUp, ArrowDown } from "lucide-react";
 import type { MyVote, VoteValue } from "@/modules/feedback/types";
 
 /**
- * Up/Down control. `myVote` highlights the active choice; `onVote` is called with
- * the clicked direction (parent performs the request and updates counts).
+ * Up/Down control with two independent counts (never a combined score). `myVote`
+ * highlights the active choice; `onVote` is called with the clicked direction
+ * (parent performs the request and updates counts).
  *
- * - `variant="bar"` (posts): two full-width Facebook-style action buttons with
- *   labels ("Thích" / "Không thích") and no inline score — the parent shows the
- *   score separately in its stat row.
- * - `variant="compact"` (comments): small ▲ score ▼ inline control.
+ * - `variant="bar"` (posts): two full-width action buttons with ▲ Up / ▼ Down
+ *   labels; the parent shows the per-direction tallies separately in its stat row.
+ * - `variant="compact"` (comments): small ▲ n  ▼ n inline control.
  */
 export function VoteButtons({
-  score,
+  upCount,
+  downCount,
   myVote,
   onVote,
   disabled,
   variant = "compact",
 }: {
-  score: number;
+  upCount: number;
+  downCount: number;
   myVote: MyVote;
   onVote: (value: VoteValue) => void;
   disabled?: boolean;
@@ -34,22 +36,22 @@ export function VoteButtons({
         <button
           type="button"
           className={`fb-actionbtn ${myVote === 1 ? "active up" : ""}`}
-          aria-label="Thích"
+          aria-label="Up"
           aria-pressed={myVote === 1}
           disabled={disabled}
           onClick={() => onVote(1)}
         >
-          <ThumbsUp size={18} strokeWidth={2.2} /> Thích
+          <ArrowUp size={18} strokeWidth={2.4} /> Up
         </button>
         <button
           type="button"
           className={`fb-actionbtn ${myVote === -1 ? "active down" : ""}`}
-          aria-label="Không thích"
+          aria-label="Down"
           aria-pressed={myVote === -1}
           disabled={disabled}
           onClick={() => onVote(-1)}
         >
-          <ThumbsDown size={18} strokeWidth={2.2} /> Không thích
+          <ArrowDown size={18} strokeWidth={2.4} /> Down
         </button>
       </div>
     );
@@ -60,23 +62,24 @@ export function VoteButtons({
       <button
         type="button"
         className={`fb-vote ${myVote === 1 ? "active up" : ""}`}
-        aria-label="Thích"
+        aria-label="Up"
         aria-pressed={myVote === 1}
         disabled={disabled}
         onClick={() => onVote(1)}
       >
-        <ThumbsUp size={15} strokeWidth={2.2} />
+        <ArrowUp size={15} strokeWidth={2.4} />
+        <span className="fb-vote-count">{upCount}</span>
       </button>
-      <span className="fb-score">{score}</span>
       <button
         type="button"
         className={`fb-vote ${myVote === -1 ? "active down" : ""}`}
-        aria-label="Không thích"
+        aria-label="Down"
         aria-pressed={myVote === -1}
         disabled={disabled}
         onClick={() => onVote(-1)}
       >
-        <ThumbsDown size={15} strokeWidth={2.2} />
+        <ArrowDown size={15} strokeWidth={2.4} />
+        <span className="fb-vote-count">{downCount}</span>
       </button>
     </div>
   );

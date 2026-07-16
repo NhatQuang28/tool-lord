@@ -3,12 +3,14 @@ import "server-only";
 import type { NextRequest } from "next/server";
 import {
   Timestamp,
+  FieldValue,
   type DocumentData,
   type Query,
   type DocumentReference,
 } from "firebase-admin/firestore";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import { requireUser } from "@/lib/auth/requireUser";
+import { verifySessionRequest } from "@/lib/auth/session";
 import { resolveRole } from "@/lib/auth/roles.server";
 import { hasAtLeast, type Role } from "@/lib/roles";
 import { computeVoteDelta } from "./votes";
@@ -56,6 +58,31 @@ export async function resolveCaller(req: NextRequest): Promise<Caller> {
   if (!decoded) return { uid: null, role: "user" };
   const role = await resolveRole(decoded);
   return { uid: decoded.uid, role };
+}
+
+/**
+ * Resolve the caller from the HttpOnly session cookie. Used by the SSE
+ * endpoints: `EventSource` can't send an Authorization header, so identity
+ * rides in the session cookie instead (see `lib/auth/session.ts`). An
+ * absent/invalid cookie yields the public caller.
+ */
+export async function resolveCallerFromRequest(req: NextRequest): Promise<Caller> {
+  const decoded = await verifySessionRequest(req);
+  if (!decoded) return { uid: null, role: "user" };
+  const role = await resolveRole(decoded);
+  return { uid: decoded.uid, role };
+}
+
+/**
+ * Reject an id that could be read as a nested Firestore path. A stray "/" in a
+ * path param (e.g. "abc/comments/xyz") would make `.doc(id)` point at a
+ * different document; legitimate Firestore auto-ids never contain one.
+ */
+function assertDocId(id: string, label = "định danh"): string {
+  if (!id || id.includes("/")) {
+    throw new FeedbackError(400, `Mã ${label} không hợp lệ.`);
+  }
+  return id;
 }
 
 function validateContent(raw: unknown, max: number, label: string): string {
@@ -241,7 +268,7 @@ export async function getPostWithComments(
   caller: Caller,
   postId: string,
 ): Promise<{ post: PostDto | null; comments: CommentDto[] }> {
-  const postRef = adminDb.collection(POSTS).doc(postId);
+  const postRef = adminDb.collection(POSTS).doc(assertDocId(postId, "bài viết"));
   const postSnap = await postRef.get();
   const privileged = canRevealIdentity(caller.role);
   if (!postSnap.exists) return { post: null, comments: [] };
@@ -269,6 +296,95 @@ export async function getPostWithComments(
     mapComment(caller, doc.id, doc.data(), votes.get(doc.id) ?? 0, authors),
   );
   return { post, comments };
+}
+
+// ---- Realtime subscriptions (SSE) --------------------------------------------
+
+/**
+ * Subscriber callbacks for a live stream. DTOs are already shaped for the given
+ * caller (author redacted, `myVote`/`mine` resolved) — identical to the REST
+ * path — so the anonymity invariant holds even though delivery is realtime.
+ */
+export interface PostStream {
+  onPost: (post: PostDto) => void;
+  onRemove: (id: string) => void;
+  onError?: (err: Error) => void;
+}
+export interface CommentStream {
+  onComment: (comment: CommentDto) => void;
+  onRemove: (id: string) => void;
+  onError?: (err: Error) => void;
+}
+
+/**
+ * Listen for changes to the post feed and push per-caller DTOs. The initial
+ * snapshot (the whole current page) is skipped — the client already loaded the
+ * list over REST — so only subsequent changes stream. Returns an unsubscribe fn.
+ */
+export function subscribeFeed(caller: Caller, sub: PostStream): () => void {
+  const privileged = canRevealIdentity(caller.role);
+  const q = adminDb.collection(POSTS).orderBy("createdAt", "desc").limit(50);
+  let first = true;
+  return q.onSnapshot(
+    (snap) => {
+      if (first) {
+        first = false;
+        return;
+      }
+      for (const change of snap.docChanges()) {
+        const doc = change.doc;
+        const deleted = doc.get("status") === "deleted";
+        // Non-privileged callers must never learn a hidden post's contents.
+        if (change.type === "removed" || (deleted && !privileged)) {
+          sub.onRemove(doc.id);
+          continue;
+        }
+        (async () => {
+          const authors = await resolveAuthors(caller.role, [String(doc.get("authorUid") ?? "")]);
+          const votes = await callerVotes(caller.uid, [
+            doc.ref.collection("votes").doc(caller.uid ?? "_"),
+          ]);
+          return mapPost(caller, doc.id, doc.data(), votes.get(doc.id) ?? 0, authors);
+        })()
+          .then(sub.onPost)
+          .catch((e) => sub.onError?.(e as Error));
+      }
+    },
+    (err) => sub.onError?.(err),
+  );
+}
+
+/** Listen for changes to one post's comments and push per-caller DTOs. */
+export function subscribeComments(caller: Caller, postId: string, sub: CommentStream): () => void {
+  const privileged = canRevealIdentity(caller.role);
+  const q = adminDb.collection(POSTS).doc(assertDocId(postId, "bài viết")).collection("comments").orderBy("createdAt", "asc");
+  let first = true;
+  return q.onSnapshot(
+    (snap) => {
+      if (first) {
+        first = false;
+        return;
+      }
+      for (const change of snap.docChanges()) {
+        const doc = change.doc;
+        const deleted = doc.get("status") === "deleted";
+        if (change.type === "removed" || (deleted && !privileged)) {
+          sub.onRemove(doc.id);
+          continue;
+        }
+        (async () => {
+          const authors = await resolveAuthors(caller.role, [String(doc.get("authorUid") ?? "")]);
+          const votes = await callerVotes(caller.uid, [
+            doc.ref.collection("votes").doc(caller.uid ?? "_"),
+          ]);
+          return mapComment(caller, doc.id, doc.data(), votes.get(doc.id) ?? 0, authors);
+        })()
+          .then(sub.onComment)
+          .catch((e) => sub.onError?.(e as Error));
+      }
+    },
+    (err) => sub.onError?.(err),
+  );
 }
 
 // ---- Helpers for single-item DTO after a mutation ----------------------------
@@ -316,7 +432,7 @@ export async function createPost(uid: string, content: string): Promise<PostDto>
 
 /** Load a post ref + require it to exist; throw 404 otherwise. */
 async function requirePost(postId: string): Promise<{ ref: DocumentReference; data: DocumentData }> {
-  const ref = adminDb.collection(POSTS).doc(postId);
+  const ref = adminDb.collection(POSTS).doc(assertDocId(postId, "bài viết"));
   const snap = await ref.get();
   if (!snap.exists) throw new FeedbackError(404, "Không tìm thấy bài viết.");
   return { ref, data: snap.data()! };
@@ -331,7 +447,15 @@ export async function editPostContent(
   if (!caller.uid || caller.uid !== data.authorUid)
     throw new FeedbackError(403, "Bạn chỉ có thể sửa bài của mình.");
   const clean = validateContent(content, MAX_POST_LEN, "Nội dung");
-  await ref.update({ content: clean, editedAt: Timestamp.now() });
+  const patch: DocumentData = { content: clean, editedAt: Timestamp.now() };
+  // Editing invalidates any prior moderation approval: the "Đã duyệt" badge must
+  // never vouch for content a moderator hasn't seen (bait-and-switch defense).
+  if (data.approved) {
+    patch.approved = false;
+    patch.approvedBy = FieldValue.delete();
+    patch.approvedAt = FieldValue.delete();
+  }
+  await ref.update(patch);
   return postDtoForCaller(caller, ref);
 }
 
@@ -402,10 +526,41 @@ async function requireComment(
   postId: string,
   cid: string,
 ): Promise<{ ref: DocumentReference; data: DocumentData }> {
-  const ref = adminDb.collection(POSTS).doc(postId).collection("comments").doc(cid);
+  const ref = adminDb
+    .collection(POSTS)
+    .doc(assertDocId(postId, "bài viết"))
+    .collection("comments")
+    .doc(assertDocId(cid, "bình luận"));
   const snap = await ref.get();
   if (!snap.exists) throw new FeedbackError(404, "Không tìm thấy bình luận.");
   return { ref, data: snap.data()! };
+}
+
+/**
+ * Set a comment's visibility and keep the parent post's `commentCount` in sync
+ * with the number of NON-deleted comments (which is what users see). Runs in a
+ * transaction and only adjusts the count when visibility actually flips, so
+ * repeated hide/restore calls can't drift the count.
+ */
+async function setCommentVisibility(
+  commentRef: DocumentReference,
+  status: "visible" | "deleted",
+): Promise<void> {
+  const postRef = commentRef.parent.parent!;
+  await adminDb.runTransaction(async (tx) => {
+    const commentSnap = await tx.get(commentRef);
+    if (!commentSnap.exists) throw new FeedbackError(404, "Không tìm thấy bình luận.");
+    const wasDeleted = commentSnap.get("status") === "deleted";
+    const willDelete = status === "deleted";
+    if (wasDeleted === willDelete) {
+      tx.update(commentRef, { status }); // no visibility change → count untouched
+      return;
+    }
+    const postSnap = await tx.get(postRef); // read before writes (tx rule)
+    const current = Number(postSnap.get("commentCount") ?? 0);
+    tx.update(commentRef, { status });
+    tx.update(postRef, { commentCount: Math.max(0, current + (willDelete ? -1 : 1)) });
+  });
 }
 
 export async function editCommentContent(
@@ -433,7 +588,7 @@ export async function moderateComment(
   if (action !== "hide" && action !== "restore")
     throw new FeedbackError(400, "Hành động không hợp lệ.");
   const { ref } = await requireComment(postId, cid);
-  await ref.update({ status: action === "hide" ? "deleted" : "visible" });
+  await setCommentVisibility(ref, action === "hide" ? "deleted" : "visible");
   return commentDtoForCaller(caller, ref);
 }
 
@@ -446,7 +601,7 @@ export async function softDeleteComment(
   const isOwner = caller.uid !== null && caller.uid === data.authorUid;
   if (!isOwner && !hasAtLeast(caller.role, "manager"))
     throw new FeedbackError(403, "Bạn không có quyền xóa bình luận này.");
-  await ref.update({ status: "deleted" });
+  await setCommentVisibility(ref, "deleted");
   return commentDtoForCaller(caller, ref);
 }
 
@@ -473,7 +628,7 @@ async function voteOn(itemRef: DocumentReference, uid: string, value: VoteValue)
 }
 
 export async function votePost(uid: string, postId: string, value: VoteValue): Promise<VoteResult> {
-  return voteOn(adminDb.collection(POSTS).doc(postId), uid, value);
+  return voteOn(adminDb.collection(POSTS).doc(assertDocId(postId, "bài viết")), uid, value);
 }
 
 export async function voteComment(
@@ -482,5 +637,10 @@ export async function voteComment(
   cid: string,
   value: VoteValue,
 ): Promise<VoteResult> {
-  return voteOn(adminDb.collection(POSTS).doc(postId).collection("comments").doc(cid), uid, value);
+  const ref = adminDb
+    .collection(POSTS)
+    .doc(assertDocId(postId, "bài viết"))
+    .collection("comments")
+    .doc(assertDocId(cid, "bình luận"));
+  return voteOn(ref, uid, value);
 }
